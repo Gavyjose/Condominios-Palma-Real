@@ -1,0 +1,12 @@
+node_modules/
+.env
+*.db
+.tmp/
+temp/
+dist/
+build/
+uploads/
+torre9-web/node_modules/
+torre9-web/dist/
+*.log
+.DS_Store

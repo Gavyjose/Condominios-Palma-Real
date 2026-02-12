@@ -1,0 +1,294 @@
+import React, { useState, useEffect } from 'react';
+import {
+    Settings,
+    Building2,
+    UserPlus,
+    Save,
+    Info,
+    MapPin,
+    Hash,
+    CheckCircle2,
+    Loader2,
+    Trash2,
+    FileText
+} from 'lucide-react';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+
+const SettingsPanel = ({ onUpdate }) => {
+    // Estados para condominios
+    const [condominios, setCondominios] = useState([]);
+    const [condominioActivo, setCondominioActivo] = useState(null);
+    const [newCondo, setNewCondo] = useState({ nombre: '', nombre_torre: '', rif: '', direccion: '' });
+    const [editingCondo, setEditingCondo] = useState(null);
+
+    // Estados para apartamentos
+    const [apartamentos, setApartamentos] = useState([]);
+    const [newApto, setNewApto] = useState({ codigo: '', propietario: '' });
+    const [editingApto, setEditingApto] = useState(null);
+
+    // Estados UI
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [success, setSuccess] = useState(false);
+
+    // Estados para el buscador de mapas (OSM)
+    const [searchQuery, setSearchQuery] = useState('');
+    const [suggestions, setSuggestions] = useState([]);
+    const [searching, setSearching] = useState(false);
+
+    useEffect(() => {
+        fetchCondominios();
+        fetchCondominioActivo();
+        fetchApartamentos();
+    }, []);
+
+    const fetchCondominios = async () => {
+        try {
+            const resp = await fetch(`${API_URL}/condominios`);
+            const data = await resp.json();
+            setCondominios(data);
+        } catch (error) {
+            console.error("Error fetching condominios:", error);
+        }
+    };
+
+    const fetchCondominioActivo = async () => {
+        try {
+            const resp = await fetch(`${API_URL}/condominios/activo`);
+            const data = await resp.json();
+            setCondominioActivo(data);
+        } catch (error) {
+            console.error("Error fetching condominio activo:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchApartamentos = async () => {
+        try {
+            const resp = await fetch(`${API_URL}/apartamentos`);
+            const data = await resp.json();
+            setApartamentos(data);
+        } catch (error) {
+            console.error("Error fetching apartamentos:", error);
+        }
+    };
+
+
+    // ==============================================================================
+    // FUNCIONES CRUD - CONDOMINIOS
+    // ==============================================================================
+
+    const createCondominio = async (e) => {
+        e.preventDefault();
+        try {
+            const resp = await fetch(`${API_URL}/condominios`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+                },
+                body: JSON.stringify(newCondo)
+            });
+            if (resp.ok) {
+                alert("Condominio creado con éxito");
+                setNewCondo({ nombre: '', nombre_torre: '', rif: '', direccion: '' });
+                fetchCondominios();
+            } else {
+                alert("Error al crear condominio");
+            }
+        } catch (error) {
+            console.error("Error creating condominio:", error);
+        }
+    };
+
+    const updateCondominio = async (id) => {
+        try {
+            const resp = await fetch(`${API_URL}/condominios/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+                },
+                body: JSON.stringify(editingCondo)
+            });
+            if (resp.ok) {
+                setEditingCondo(null);
+                fetchCondominios();
+                if (condominioActivo?.id === id) fetchCondominioActivo();
+            } else {
+                alert("Error al actualizar condominio");
+            }
+        } catch (error) {
+            console.error("Error updating condominio:", error);
+        }
+    };
+
+    const activarCondominio = async (id) => {
+        if (!confirm("¿Cambiar al condominio seleccionado? Esto recargará los datos del edificio activo.")) return;
+        try {
+            const resp = await fetch(`${API_URL}/condominios/${id}/activar`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+                }
+            });
+            if (resp.ok) {
+                fetchCondominios();
+                fetchCondominioActivo();
+                fetchApartamentos();
+                if (onUpdate) onUpdate();
+                alert("Condominio activado. La aplicación se actualizará.");
+            } else {
+                alert("Error al activar condominio");
+            }
+        } catch (error) {
+            console.error("Error activating condominio:", error);
+        }
+    };
+
+    const deleteCondominio = async (id) => {
+        if (!confirm("¿Eliminar este condominio? Esta acción es irreversible y eliminará todos sus datos asociados (apartamentos, gastos, etc.).")) return;
+        try {
+            const resp = await fetch(`${API_URL}/condominios/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+                }
+            });
+            if (resp.ok) {
+                fetchCondominios();
+            } else {
+                const errorData = await resp.json();
+                alert(`Error: ${errorData.error || 'No se puede eliminar'}`);
+            }
+        } catch (error) {
+            console.error("Error deleting condominio:", error);
+        }
+    };
+
+    // ==============================================================================
+    // FUNCIONES DE UTILIDAD (MAPAS)
+    // ==============================================================================
+
+    // Buscador de direcciones (Nominatim OSM)
+    const handleSearch = async (query) => {
+        setSearchQuery(query);
+        if (editingCondo) {
+            setEditingCondo({ ...editingCondo, direccion: query });
+        }
+        if (query.length < 3) {
+            setSuggestions([]);
+            return;
+        }
+
+        setSearching(true);
+        try {
+            const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`);
+            const data = await resp.json();
+            setSuggestions(data);
+        } catch (error) {
+            console.error("Error buscando dirección:", error);
+        } finally {
+            setSearching(false);
+        }
+    };
+
+    const selectAddress = (item) => {
+        const fullAddress = item.display_name.toUpperCase();
+        if (editingCondo) {
+            setEditingCondo({ ...editingCondo, direccion: fullAddress });
+        }
+        setSearchQuery(fullAddress);
+        setSuggestions([]);
+    };
+
+
+    // ==============================================================================
+    // FUNCIONES CRUD - APART
+
+
+    // ==============================================================================
+
+    const addApto = async (e) => {
+        e.preventDefault();
+        try {
+            const resp = await fetch(`${API_URL}/apartamentos`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+                },
+                body: JSON.stringify({
+                    codigo: newApto.codigo.toUpperCase().trim(),
+                    propietario: newApto.propietario.toUpperCase().trim()
+                })
+            });
+            if (resp.ok) {
+                alert("Apartamento agregado con éxito");
+                setNewApto({ codigo: '', propietario: '' });
+                fetchApartamentos();
+                if (onUpdate) onUpdate();
+            } else {
+                const errorData = await resp.json();
+                alert(`Error al agregar apto: ${errorData.error || 'Acceso denegado'}`);
+            }
+        } catch (error) {
+            console.error("Error adding apto:", error);
+            alert("Error de conexión al registrar el apartamento.");
+        }
+    };
+
+    const updateApto = async (id) => {
+        try {
+            const resp = await fetch(`${API_URL}/apartamentos/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+                },
+                body: JSON.stringify({
+                    codigo: editingApto.codigo.toUpperCase().trim(),
+                    propietario: editingApto.propietario.toUpperCase().trim()
+                })
+            });
+            if (resp.ok) {
+                setEditingApto(null);
+                fetchApartamentos();
+                if (onUpdate) onUpdate();
+            } else {
+                alert("Error al actualizar apartamento");
+            }
+        } catch (error) {
+            console.error("Error updating apto:", error);
+        }
+    };
+
+    const deleteApto = async (id) => {
+        if (!confirm("¿Seguro que deseas eliminar esta unidad? Esta acción es irreversible y afectará los reportes históricos.")) return;
+        try {
+            const resp = await fetch(`${API_URL}/apartamentos/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+                }
+            });
+            if (resp.ok) {
+                fetchApartamentos();
+                if (onUpdate) onUpdate();
+            } else {
+                alert("Error al eliminar apartamento");
+            }
+        } catch (error) {
+            console.error("Error deleting apto:", error);
+        }
+    };
+
+    if (loading) return (
+        <div className="p-20 text-center">
+            <Loader2 className="animate-spin mx-auto text-blue-600 mb-4" size={48} />
+            <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Cargando Configuración...</p>
+        </div>
+    );
+

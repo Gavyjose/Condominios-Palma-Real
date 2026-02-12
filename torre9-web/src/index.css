@@ -1,0 +1,90 @@
+@import "tailwindcss";
+
+@theme {
+    --color-ledger-ink: #0f172a;
+    /* Slate-900 */
+    --color-ledger-paper: #fbfffb;
+    /* Fondo papel casi blanco */
+    --color-ledger-audit: #f8fafc;
+    /* Slate-50 */
+    --color-ledger-border: #e2e8f0;
+    /* Slate-200 */
+    --color-ledger-accent: #2563eb;
+    /* Blue-600 */
+
+    --font-serif: "Inter", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", "Roboto Mono", monospace;
+
+    --shadow-ledger: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-ledger-hover: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+@layer base {
+    body {
+        @apply bg-ledger-audit text-ledger-ink font-sans antialiased;
+    }
+
+    /* Números siempre en Mono para alineación contable */
+    .font-mono,
+    [className*="font-mono"],
+    td,
+    input[type="number"],
+    .stat-value {
+        font-variant-numeric: tabular-nums;
+    }
+}
+
+@layer components {
+    .ledger-card {
+        @apply bg-white border border-ledger-border rounded-2xl shadow-ledger transition-all duration-300;
+    }
+
+    .ledger-card-hover {
+        @apply hover:shadow-ledger-hover hover:border-ledger-accent/20;
+    }
+
+    .ledger-input {
+        @apply w-full px-4 py-3 rounded-xl border border-ledger-border bg-white transition-all focus:outline-none focus:border-ledger-accent focus:ring-1 focus:ring-ledger-accent/20 placeholder:text-slate-400;
+    }
+
+    .ledger-button-primary {
+        @apply px-6 py-3 bg-ledger-ink text-white rounded-xl font-bold transition-all hover:bg-ledger-accent active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
+    }
+
+    .glass-header {
+        @apply sticky top-0 z-50 bg-white/70 backdrop-blur-xl border-b border-ledger-border;
+    }
+
+    .ledger-table-header {
+        @apply bg-ledger-audit text-[10px] font-black uppercase tracking-widest text-slate-500 border-b border-ledger-border;
+    }
+
+    .ledger-row {
+        @apply border-b border-slate-50 hover:bg-ledger-audit/50 transition-colors;
+    }
+}
+
+/* Custom Scrollbar for Ledger look */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-slate-700/50 rounded-full hover:bg-slate-600 transition-colors;
+}
+
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    @apply bg-slate-200 rounded-full hover:bg-slate-300 transition-colors;
+}
