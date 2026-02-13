@@ -67,7 +67,7 @@ const App = () => {
         fetchJson(`${API_URL}/gastos?mes_anio=${mesAnioStr}&t=${Date.now()}`),
         fetchJson(`${API_URL}/cobranzas`),
         fetchJson(`${API_URL}/terraza`),
-        fetchJson(`${API_URL}/notificaciones`),
+        fetchJson(`${API_URL}/notificaciones?status=ALL`),
         fetchJson(`${API_URL}/config`)
       ]);
 
@@ -116,6 +116,10 @@ const App = () => {
   const aptosSolventes = data.cobranzas?.filter(c => c.deuda_total_usd <= 0.1).length || 0;
   const porcentajeSolvencia = totalAptos > 0 ? ((aptosSolventes / totalAptos) * 100).toFixed(1) : 0;
 
+  // Filtrado para componentes que requieren solo Pendientes
+  const pendingNotifications = data.notifications?.filter(n => n.estatus === 'PENDIENTE') || [];
+  const dataForManagement = { ...data, notifications: pendingNotifications };
+
   const handleLogout = () => {
     sessionStorage.removeItem('token');
     sessionStorage.removeItem('user');
@@ -132,7 +136,7 @@ const App = () => {
         adminSubView={adminSubView}
         setAdminSubView={setAdminSubView}
         logout={logout}
-        notificationsCount={data?.notifications?.length || 0}
+        notificationsCount={pendingNotifications.length}
         isCollapsed={isCollapsed}
         setIsCollapsed={setIsCollapsed}
       />
@@ -159,11 +163,11 @@ const App = () => {
           <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
             {view === 'admin' ? (
               <>
-                {adminSubView === 'dashboard' && <AdminPanel data={data} porcentajeSolvencia={porcentajeSolvencia} aptosSolventes={aptosSolventes} totalAptos={totalAptos} />}
+                {adminSubView === 'dashboard' && <AdminPanel data={data} config={config} API_URL={API_URL} porcentajeSolvencia={porcentajeSolvencia} aptosSolventes={aptosSolventes} totalAptos={totalAptos} />}
                 {adminSubView === 'reports' && <ReportSection data={data} totalAptos={totalAptos} config={config} />}
                 {adminSubView === 'management' && (
                   <ManagementPanel
-                    data={data}
+                    data={dataForManagement}
                     config={config}
                     onUpdate={fetchData}
                     selectedMonth={selectedMonth}

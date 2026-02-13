@@ -1,5 +1,16 @@
 import React, { useState } from 'react';
-import { FileText, Download, Loader2, Calendar, DollarSign, Printer, Table } from 'lucide-react';
+import {
+    FileText,
+    Download,
+    Loader2,
+    Calendar,
+    DollarSign,
+    Printer,
+    Table,
+    X,
+    Eye,
+    CheckCircle2
+} from 'lucide-react';
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { sortApartamentos } from '../utils/sorting';
@@ -7,104 +18,121 @@ import { sortApartamentos } from '../utils/sorting';
 const ReportesAvanzados = ({ config, API_URL, data: externalData }) => {
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
     const [selectedApto, setSelectedApto] = useState('todos');
-    const [loadingSabana, setLoadingSabana] = useState(false);
-    const [errorSabana, setErrorSabana] = useState(null);
-    const [loadingRecibos, setLoadingRecibos] = useState(false);
-    const [errorRecibos, setErrorRecibos] = useState(null);
 
-    const handleGenerateSabana = async () => {
-        setLoadingSabana(true);
-        setErrorSabana(null);
-        try {
-            const [anio, mes] = selectedDate.split('-');
-            const token = sessionStorage.getItem('token');
-            const res = await fetch(`${API_URL}/reportes/sabana?anio=${anio}&mes=${mes}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+    // Estados para Vista Previa
+    const [showPreview, setShowPreview] = useState(false);
+    const [previewType, setPreviewType] = useState(null); // 'sabana' | 'recibos'
+    const [previewData, setPreviewData] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
-            if (!res.ok) throw new Error("Error obteniendo datos del servidor");
-            const data = await res.json();
+    // --- LÓGICA DE GENERACIÓN DE PDF (REUTILIZABLE) ---
 
-            if (!data.data || data.data.length === 0) {
-                alert("No hay datos para el mes seleccionado.");
-                setLoading(false);
-                return;
-            }
+    const generateSabanaPDF = (data, action = 'save') => {
+        const [anio, mes] = selectedDate.split('-');
+        const doc = new jsPDF({ orientation: 'landscape' });
 
-            const doc = new jsPDF({ orientation: 'landscape' });
-            doc.setFontSize(18);
-            doc.text(`${config.nombre_condominio || 'CONDOMINIO'}`, 14, 15);
-            doc.setFontSize(12);
-            doc.text(`SÁBANA DE COBRANZAS - MES ${mes}/${anio}`, 14, 22);
+        doc.setFontSize(18);
+        doc.text(`${config.nombre_condominio || 'CONDOMINIO'}`, 14, 15);
+        doc.setFontSize(12);
+        doc.text(`SÁBANA DE COBRANZAS - MES ${mes}/${anio}`, 14, 22);
 
-            const monthNames = ["", "ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"];
-            const mesActual = parseInt(mes);
-            const anioActual = parseInt(anio);
-            let mesAnterior = mesActual - 1;
-            let anioAnterior = anioActual;
-            if (mesAnterior === 0) { mesAnterior = 12; anioAnterior = anioActual - 1; }
+        const monthNames = ["", "ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"];
+        const mesActual = parseInt(mes);
+        const anioActual = parseInt(anio);
+        let mesAnterior = mesActual - 1;
+        let anioAnterior = anioActual;
+        if (mesAnterior === 0) { mesAnterior = 12; anioAnterior = anioActual - 1; }
 
-            const labelMesActual = `MES ACTUAL: ${monthNames[mesActual]} ${anioActual}`;
-            const labelMesAnterior = `MES ANTERIOR: ${monthNames[mesAnterior]} ${anioAnterior}`;
+        const labelMesActual = `MES ACTUAL: ${monthNames[mesActual]} ${anioActual}`;
+        const labelMesAnterior = `MES ANTERIOR: ${monthNames[mesAnterior]} ${anioAnterior}`;
 
-            const totalSaldoInicial = data.data.reduce((sum, item) => sum + item.saldo_inicial_usd, 0);
-            const totalPagosBs = data.data.reduce((sum, item) => sum + item.pagos_bs, 0);
-            const totalPagosUsd = data.data.reduce((sum, item) => sum + item.pagos_usd, 0);
-            const totalSaldoAnt = data.data.reduce((sum, item) => sum + (item.saldo_pre_cuota_usd || 0), 0);
-            const totalCuotaMes = data.data.reduce((sum, item) => sum + item.cuota_mes_usd, 0);
-            const totalSaldoFinal = data.data.reduce((sum, item) => sum + item.saldo_final_usd, 0);
+        const totalSaldoInicial = data.data.reduce((sum, item) => sum + item.saldo_inicial_usd, 0);
+        const totalPagosBs = data.data.reduce((sum, item) => sum + item.pagos_bs, 0);
+        const totalPagosUsd = data.data.reduce((sum, item) => sum + item.pagos_usd, 0);
+        const totalSaldoAnt = data.data.reduce((sum, item) => sum + (item.saldo_pre_cuota_usd || 0), 0);
+        const totalCuotaMes = data.data.reduce((sum, item) => sum + item.cuota_mes_usd, 0);
+        const totalSaldoFinal = data.data.reduce((sum, item) => sum + item.saldo_final_usd, 0);
 
-            autoTable(doc, {
-                startY: 30,
-                head: [
-                    [
-                        { content: 'APTO', rowSpan: 2, styles: { valign: 'middle', halign: 'center' } },
-                        { content: 'PROPIETARIO', rowSpan: 2, styles: { valign: 'middle', halign: 'center' } },
-                        { content: labelMesAnterior, colSpan: 4, styles: { halign: 'center', fillColor: [41, 128, 185] } },
-                        { content: labelMesActual, colSpan: 2, styles: { halign: 'center', fillColor: [39, 174, 96] } }
-                    ],
-                    ['SALDO INIC ($)', 'PAGOS (Bs)', 'PAGOS ($)', 'SALDO MES ANT ($)', 'CUOTA MES ($)', 'SALDO FINAL ($)']
+        autoTable(doc, {
+            startY: 30,
+            head: [
+                [
+                    { content: 'APTO', rowSpan: 2, styles: { valign: 'middle', halign: 'center' } },
+                    { content: 'PROPIETARIO', rowSpan: 2, styles: { valign: 'middle', halign: 'center' } },
+                    { content: labelMesAnterior, colSpan: 4, styles: { halign: 'center', fillColor: [41, 128, 185] } },
+                    { content: labelMesActual, colSpan: 2, styles: { halign: 'center', fillColor: [39, 174, 96] } }
                 ],
-                body: sortApartamentos(data.data).map(row => [
-                    row.apto,
-                    row.propietario,
-                    row.saldo_inicial_usd.toFixed(2),
-                    row.pagos_bs.toLocaleString('de-DE', { minimumFractionDigits: 2 }),
-                    row.pagos_usd.toFixed(2),
-                    (row.saldo_pre_cuota_usd || 0).toFixed(2),
-                    row.cuota_mes_usd.toFixed(2),
-                    row.saldo_final_usd.toFixed(2)
-                ]),
-                foot: [
-                    [
-                        { content: 'TOTALES GENERALES', colSpan: 2, styles: { halign: 'right', fontStyle: 'bold' } },
-                        totalSaldoInicial.toFixed(2),
-                        totalPagosBs.toLocaleString('de-DE', { minimumFractionDigits: 2 }),
-                        totalPagosUsd.toFixed(2),
-                        totalSaldoAnt.toFixed(2),
-                        totalCuotaMes.toFixed(2),
-                        totalSaldoFinal.toFixed(2)
-                    ]
-                ],
-                theme: 'grid',
-                styles: { fontSize: 8, halign: 'center' },
-                headStyles: { fillColor: [52, 73, 94], textColor: 255, fontStyle: 'bold' },
-                footStyles: { fillColor: [241, 196, 15], textColor: 0, fontStyle: 'bold' },
-                columnStyles: { 1: { halign: 'left' } },
-                didParseCell: function (data) {
-                    if (data.section === 'head' && data.row.index === 1) {
-                        if (data.column.index >= 2 && data.column.index <= 5) data.cell.styles.fillColor = [52, 152, 219];
-                        if (data.column.index >= 6) data.cell.styles.fillColor = [46, 204, 113];
-                    }
+                ['SALDO INIC ($)', 'PAGOS (Bs)', 'PAGOS ($)', 'SALDO MES ANT ($)', 'CUOTA MES ($)', 'SALDO FINAL ($)']
+            ],
+            body: sortApartamentos(data.data).map(row => [
+                row.apto,
+                row.propietario,
+                row.saldo_inicial_usd.toFixed(2),
+                row.pagos_bs.toLocaleString('de-DE', { minimumFractionDigits: 2 }),
+                row.pagos_usd.toFixed(2),
+                (row.saldo_pre_cuota_usd || 0).toFixed(2),
+                row.cuota_mes_usd.toFixed(2),
+                row.saldo_final_usd.toFixed(2)
+            ]),
+            foot: [
+                [
+                    { content: 'TOTALES GENERALES', colSpan: 2, styles: { halign: 'right', fontStyle: 'bold' } },
+                    totalSaldoInicial.toFixed(2),
+                    totalPagosBs.toLocaleString('de-DE', { minimumFractionDigits: 2 }),
+                    totalPagosUsd.toFixed(2),
+                    totalSaldoAnt.toFixed(2),
+                    totalCuotaMes.toFixed(2),
+                    totalSaldoFinal.toFixed(2)
+                ]
+            ],
+            theme: 'grid',
+            styles: { fontSize: 8, halign: 'center' },
+            headStyles: { fillColor: [52, 73, 94], textColor: 255, fontStyle: 'bold' },
+            footStyles: { fillColor: [241, 196, 15], textColor: 0, fontStyle: 'bold' },
+            columnStyles: { 1: { halign: 'left' } },
+            didParseCell: function (data) {
+                if (data.section === 'head' && data.row.index === 1) {
+                    if (data.column.index >= 2 && data.column.index <= 5) data.cell.styles.fillColor = [52, 152, 219];
+                    if (data.column.index >= 6) data.cell.styles.fillColor = [46, 204, 113];
                 }
-            });
+            }
+        });
 
+        if (action === 'save') {
             doc.save(`Sabana_Cobranzas_${anio}_${mes}.pdf`);
-        } catch (err) {
-            console.error(err);
-            setErrorSabana(err.message);
-        } finally {
-            setLoadingSabana(false);
+        } else {
+            doc.autoPrint();
+            window.open(doc.output('bloburl'), '_blank');
+        }
+    };
+
+    const generateRecibosPDF = (data, action = 'save') => {
+        const [anio, mes] = selectedDate.split('-');
+        const doc = new jsPDF();
+
+        if (selectedApto === 'general') {
+            generateGeneralSummaryPage(doc, data, mes, anio);
+        } else if (selectedApto === 'todos') {
+            generateGeneralSummaryPage(doc, data, mes, anio);
+            sortApartamentos(data.recibos).forEach((recibo) => {
+                doc.addPage();
+                renderIndividualReceipt(doc, recibo, data, mes, anio);
+            });
+        } else {
+            const recibo = data.recibos[0];
+            if (recibo) renderIndividualReceipt(doc, recibo, data, mes, anio);
+        }
+
+        const fileName = selectedApto === 'todos' ? `Recibos_Masivos_${anio}_${mes}.pdf` :
+            selectedApto === 'general' ? `Recibo_General_${anio}_${mes}.pdf` :
+                `Recibo_${selectedApto}_${anio}_${mes}.pdf`;
+
+        if (action === 'save') {
+            doc.save(fileName);
+        } else {
+            doc.autoPrint();
+            window.open(doc.output('bloburl'), '_blank');
         }
     };
 
@@ -125,7 +153,7 @@ const ReportesAvanzados = ({ config, API_URL, data: externalData }) => {
         doc.setFontSize(14);
         doc.text("DISTRIBUCIÓN DE EGRESOS DEL MES", 14, 55);
 
-        const bodyGastos = data.gastos.map(g => [g.concepto, `$${g.monto_usd.toFixed(2)}`]);
+        const bodyGastos = (data.gastos || []).map(g => [g.concepto, `$${g.monto_usd.toFixed(2)}`]);
 
         autoTable(doc, {
             startY: 60,
@@ -136,14 +164,14 @@ const ReportesAvanzados = ({ config, API_URL, data: externalData }) => {
             columnStyles: { 1: { halign: 'right', fontStyle: 'bold' } }
         });
 
-        const finalY = doc.lastAutoTable.finalY + 15;
+        const finalY = (doc.lastAutoTable?.finalY || 60) + 15;
         doc.setFillColor(241, 196, 15);
         doc.rect(14, finalY, 182, 20, 'F');
         doc.setFontSize(12);
         doc.setTextColor(30, 41, 59);
         doc.setFont(undefined, 'bold');
-        doc.text(`TOTAL A RECAUDAR: $${data.total_gastos.toFixed(2)}`, 20, finalY + 8);
-        doc.text(`ALÍCUOTA ESTIMADA POR APTO: $${data.alicuota_general.toFixed(2)}`, 20, finalY + 15);
+        doc.text(`TOTAL A RECAUDAR: $${(data.total_gastos || 0).toFixed(2)}`, 20, finalY + 8);
+        doc.text(`ALÍCUOTA ESTIMADA POR APTO: $${(data.alicuota_general || 0).toFixed(2)}`, 20, finalY + 15);
 
         doc.setFontSize(10);
         doc.setFont(undefined, 'normal');
@@ -219,9 +247,34 @@ const ReportesAvanzados = ({ config, API_URL, data: externalData }) => {
         doc.text("Este documento es un comprobante de cobro administrativo. Favor reportar su pago a través del portal.", 105, 285, { align: 'center' });
     };
 
-    const handleGenerateRecibos = async () => {
-        setLoadingRecibos(true);
-        setErrorRecibos(null);
+    // --- MANEJO DE VISTA PREVIA ---
+
+    const handlePreviewSabana = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const [anio, mes] = selectedDate.split('-');
+            const token = sessionStorage.getItem('token');
+            const res = await fetch(`${API_URL}/reportes/sabana?anio=${anio}&mes=${mes}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!res.ok) throw new Error("Error obteniendo datos de la sábana");
+            const data = await res.json();
+            if (!data.data || data.data.length === 0) throw new Error("No hay datos para el mes seleccionado.");
+
+            setPreviewData(data);
+            setPreviewType('sabana');
+            setShowPreview(true);
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handlePreviewRecibos = async () => {
+        setLoading(true);
+        setError(null);
         try {
             const [anio, mes] = selectedDate.split('-');
             const token = sessionStorage.getItem('token');
@@ -231,45 +284,139 @@ const ReportesAvanzados = ({ config, API_URL, data: externalData }) => {
             const res = await fetch(url, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-
-            if (!res.ok) throw new Error("Error obteniendo datos del servidor");
+            if (!res.ok) throw new Error("Error obteniendo datos de recibos");
             const data = await res.json();
+            if (!data.recibos || data.recibos.length === 0) throw new Error("No hay datos para generar recibos.");
 
-            if (!data.recibos || data.recibos.length === 0) {
-                alert("No hay datos para generar recibos.");
-                setLoadingRecibos(false);
-                return;
-            }
-
-            const doc = new jsPDF();
-
-            if (selectedApto === 'general') {
-                generateGeneralSummaryPage(doc, data, mes, anio);
-            } else if (selectedApto === 'todos') {
-                generateGeneralSummaryPage(doc, data, mes, anio);
-                sortApartamentos(data.recibos).forEach((recibo) => {
-                    doc.addPage();
-                    renderIndividualReceipt(doc, recibo, data, mes, anio);
-                });
-            } else {
-                const recibo = data.recibos[0];
-                if (recibo) renderIndividualReceipt(doc, recibo, data, mes, anio);
-            }
-
-            const fileName = selectedApto === 'todos' ? `Recibos_Masivos_${anio}_${mes}.pdf` :
-                selectedApto === 'general' ? `Recibo_General_${anio}_${mes}.pdf` :
-                    `Recibo_${selectedApto}_${anio}_${mes}.pdf`;
-            doc.save(fileName);
+            setPreviewData(data);
+            setPreviewType('recibos');
+            setShowPreview(true);
         } catch (err) {
-            console.error(err);
-            setErrorRecibos(err.message);
+            setError(err.message);
         } finally {
-            setLoadingRecibos(false);
+            setLoading(false);
         }
     };
 
     return (
         <div className="space-y-6 pt-6 animate-fade-in-up">
+            {/* Modal de Vista Previa */}
+            {showPreview && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className="bg-white w-full max-w-5xl max-h-[90vh] rounded-[32px] shadow-2xl overflow-hidden flex flex-col border border-slate-200">
+                        {/* Header Modal */}
+                        <div className="flex justify-between items-center px-8 py-6 border-b border-slate-100 bg-slate-50">
+                            <div>
+                                <h3 className="text-xl font-black text-slate-800 uppercase tracking-tighter flex items-center gap-2">
+                                    <Eye size={20} className="text-blue-500" />
+                                    Vista Previa: {previewType === 'sabana' ? 'Sábana de Cobranzas' : 'Avisos de Cobro'}
+                                </h3>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Periodo: {selectedDate}</p>
+                            </div>
+                            <button onClick={() => setShowPreview(false)} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
+                                <X size={24} className="text-slate-400" />
+                            </button>
+                        </div>
+
+                        {/* Contenido Modal */}
+                        <div className="flex-1 overflow-y-auto p-8">
+                            {previewType === 'sabana' ? (
+                                <div className="space-y-4">
+                                    <table className="w-full text-[10px] border-collapse">
+                                        <thead>
+                                            <tr className="bg-slate-800 text-white font-black uppercase tracking-widest">
+                                                <th className="p-3 text-left">Apto</th>
+                                                <th className="p-3 text-left">Propietario</th>
+                                                <th className="p-3 text-right">S. Inicial ($)</th>
+                                                <th className="p-3 text-right">Pagos Bs</th>
+                                                <th className="p-3 text-right">Pagos $</th>
+                                                <th className="p-3 text-right">Cuota Mes $</th>
+                                                <th className="p-3 text-right">Saldo Final $</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {sortApartamentos(previewData.data).map((row, idx) => (
+                                                <tr key={idx} className="hover:bg-slate-50 font-medium">
+                                                    <td className="p-3 font-black">{row.apto}</td>
+                                                    <td className="p-3">{row.propietario}</td>
+                                                    <td className="p-3 text-right">${row.saldo_inicial_usd.toFixed(2)}</td>
+                                                    <td className="p-3 text-right">{row.pagos_bs.toLocaleString('de-DE', { minimumFractionDigits: 2 })}</td>
+                                                    <td className="p-3 text-right">${row.pagos_usd.toFixed(2)}</td>
+                                                    <td className="p-3 text-right">${row.cuota_mes_usd.toFixed(2)}</td>
+                                                    <td className="p-3 text-right font-black text-blue-600">${row.saldo_final_usd.toFixed(2)}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ) : (
+                                <div className="space-y-6">
+                                    <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100 flex justify-between items-center">
+                                        <div>
+                                            <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Resumen General de Gastos</p>
+                                            <h4 className="text-2xl font-black text-blue-900 tracking-tighter mt-1">Total Mes: ${previewData.total_gastos.toFixed(2)}</h4>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Alícuota Base</p>
+                                            <p className="text-xl font-black text-blue-900 tracking-tighter mt-1">${previewData.alicuota_general.toFixed(2)}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {sortApartamentos(previewData.recibos).slice(0, 6).map((r, i) => (
+                                            <div key={i} className="p-4 bg-slate-50 rounded-xl border border-slate-100 relative overflow-hidden group">
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <span className="text-xs font-black text-slate-800">{r.codigo}</span>
+                                                    <CheckCircle2 size={14} className="text-emerald-500 opacity-50" />
+                                                </div>
+                                                <p className="text-[9px] font-bold text-slate-400 uppercase truncate">{r.propietario}</p>
+                                                <div className="mt-3 pt-3 border-t border-slate-200/50 flex justify-between items-center">
+                                                    <span className="text-[8px] font-black text-slate-400 uppercase">Total Pagar</span>
+                                                    <span className="text-xs font-black text-emerald-600">${r.total_pagar.toFixed(2)}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {previewData.recibos.length > 6 && (
+                                            <div className="p-4 bg-slate-100/50 rounded-xl border border-dashed border-slate-200 flex items-center justify-center">
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">+{previewData.recibos.length - 6} recibos más</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Footer Modal */}
+                        <div className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-4">
+                            <button
+                                onClick={() => setShowPreview(false)}
+                                className="px-6 py-3 text-xs font-black text-slate-400 uppercase tracking-widest hover:text-slate-600 transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={() => {
+                                    if (previewType === 'sabana') generateSabanaPDF(previewData, 'print');
+                                    else generateRecibosPDF(previewData, 'print');
+                                }}
+                                className="px-6 py-3 bg-white border border-slate-200 rounded-xl text-xs font-black text-slate-700 uppercase tracking-widest flex items-center gap-2 hover:bg-slate-50 transition-colors shadow-sm"
+                            >
+                                <Printer size={16} /> Imprimir
+                            </button>
+                            <button
+                                onClick={() => {
+                                    if (previewType === 'sabana') generateSabanaPDF(previewData, 'save');
+                                    else generateRecibosPDF(previewData, 'save');
+                                }}
+                                className="px-8 py-3 bg-slate-900 text-white rounded-xl text-xs font-black text-white uppercase tracking-widest flex items-center gap-2 hover:bg-black transition-colors shadow-lg"
+                            >
+                                <Download size={16} /> Guardar PDF
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="flex justify-between items-center bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
                 <div>
                     <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">Reportes Avanzados</h2>
@@ -289,7 +436,7 @@ const ReportesAvanzados = ({ config, API_URL, data: externalData }) => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all group cursor-pointer" onClick={handleGenerateSabana}>
+                <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all group cursor-pointer" onClick={handlePreviewSabana}>
                     <div className="p-4 bg-blue-50 text-blue-600 rounded-2xl w-fit mb-6 group-hover:scale-110 transition-transform">
                         <Table size={32} strokeWidth={1.5} />
                     </div>
@@ -298,13 +445,14 @@ const ReportesAvanzados = ({ config, API_URL, data: externalData }) => {
                         Reporte tabular detallado con la evolución de la deuda (Saldo Inicial, Pagos, Cuota y Saldo Final) para todos los apartamentos.
                     </p>
                     <button
-                        disabled={loadingSabana}
+                        disabled={loading}
+                        onClick={(e) => { e.stopPropagation(); handlePreviewSabana(); }}
                         className="w-full py-4 bg-slate-900 text-white rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 disabled:opacity-50"
                     >
-                        {loadingSabana ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
-                        DESCARGAR REPORTE (PDF)
+                        {loading && previewType === 'sabana' ? <Loader2 className="animate-spin" size={18} /> : <Eye size={18} />}
+                        VISUALIZAR Y GUARDAR
                     </button>
-                    {errorSabana && <p className="text-xs text-red-500 mt-2">{errorSabana}</p>}
+                    {error && previewType === 'sabana' && <p className="text-xs text-red-500 mt-2">{error}</p>}
                 </div>
 
                 <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all group">
@@ -336,16 +484,14 @@ const ReportesAvanzados = ({ config, API_URL, data: externalData }) => {
                                 : `Generación de recibo individual para la unidad ${selectedApto}.`}
                     </p>
                     <button
-                        disabled={loadingRecibos}
-                        onClick={handleGenerateRecibos}
+                        disabled={loading}
+                        onClick={handlePreviewRecibos}
                         className="w-full py-4 bg-emerald-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-emerald-700 transition-colors flex items-center justify-center gap-3 disabled:opacity-50"
                     >
-                        {loadingRecibos ? <Loader2 className="animate-spin" size={18} /> : <Printer size={18} />}
-                        {selectedApto === 'todos' ? 'IMPRIMIR TODOS (PDF)' :
-                            selectedApto === 'general' ? 'IMPRIMIR GENERAL (PDF)' :
-                                'IMPRIMIR RECIBO (PDF)'}
+                        {loading && previewType === 'recibos' ? <Loader2 className="animate-spin" size={18} /> : <Eye size={18} />}
+                        VISUALIZAR Y GUARDAR
                     </button>
-                    {errorRecibos && <p className="text-xs text-red-500 mt-2">{errorRecibos}</p>}
+                    {error && previewType === 'recibos' && <p className="text-xs text-red-500 mt-2">{error}</p>}
                 </div>
             </div>
         </div>

@@ -65,17 +65,36 @@ const OwnerPanel = ({ data, selectedApto, setSelectedApto, onPaymentNotified, co
     const [selectedFile, setSelectedFile] = useState(null);
     const [ocrStatus, setOcrStatus] = useState('IDLE'); // IDLE, SCANNING, VALID, ERROR
     const [ocrError, setOcrError] = useState('');
+    const [extractedFields, setExtractedFields] = useState([]);
 
     const currentData = (data.cobranzas || []).find(c => c.apto === selectedApto);
     const terrazaData = (data.terraza || []).find(t => t.apto === selectedApto);
     const totalDeuda = currentData ? (currentData.deuda || currentData.deuda_total_usd || 0) : 0;
 
+    // Función para ajustar fecha si es fin de semana (Sábado -> Viernes, Domingo -> Viernes)
+    const getAdjustedDate = (dateString) => {
+        if (!dateString) return dateString;
+        const date = new Date(dateString + 'T12:00:00'); // Evitar problemas de timezone
+        const day = date.getDay(); // 0 = Domingo, 6 = Sábado
+
+        const adjusted = new Date(date);
+        if (day === 0) { // Domingo -> Retroceder 2 días
+            adjusted.setDate(date.getDate() - 2);
+        } else if (day === 6) { // Sábado -> Retroceder 1 día
+            adjusted.setDate(date.getDate() - 1);
+        } else {
+            return dateString;
+        }
+        return adjusted.toISOString().split('T')[0];
+    };
+
     useEffect(() => {
         const fetchTasa = async () => {
             if (!formData.fecha) return;
+            const fechaConsulta = getAdjustedDate(formData.fecha);
             setLoadingTasa(true);
             try {
-                const resp = await fetch(`${API_URL}/tasas/${formData.fecha}`);
+                const resp = await fetch(`${API_URL}/tasas/${fechaConsulta}`);
                 if (resp.ok) {
                     const data = await resp.json();
                     setTasaBCV(data.valor);
@@ -95,11 +114,6 @@ const OwnerPanel = ({ data, selectedApto, setSelectedApto, onPaymentNotified, co
     const handleFileChange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        if (!formData.referencia) {
-            alert("Por favor, ingresa primero el número de referencia manualmente.");
-            e.target.value = '';
-            return;
-        }
 
         setSelectedFile(file);
         setOcrStatus('SCANNING');
@@ -107,8 +121,9 @@ const OwnerPanel = ({ data, selectedApto, setSelectedApto, onPaymentNotified, co
 
         const formDataOCR = new FormData();
         formDataOCR.append('imagen', file);
-        formDataOCR.append('referenciaManual', formData.referencia);
-        formDataOCR.append('montoManual', formData.monto_bs || formData.monto_usd);
+        // Si ya hay valores manuales, los enviamos para validación cruzada
+        formDataOCR.append('referenciaManual', formData.referencia || '');
+        formDataOCR.append('montoManual', formData.monto_bs || formData.monto_usd || '');
 
         try {
             const resp = await fetch(`${API_URL}/pagos/validate-receipt`, {
@@ -118,11 +133,37 @@ const OwnerPanel = ({ data, selectedApto, setSelectedApto, onPaymentNotified, co
             });
             const result = await resp.json();
 
-            if (result.valid) {
+            if (result.valid || (result.extracted && result.extracted.referencia)) {
                 setOcrStatus('VALID');
+
+                // Auto-completado inteligente
+                if (result.extracted) {
+                    const { referencia, monto, fecha } = result.extracted;
+                    const newExtracted = [];
+                    if (referencia) newExtracted.push('referencia');
+                    if (monto) newExtracted.push('monto_bs');
+                    if (fecha) newExtracted.push('fecha');
+                    setExtractedFields(newExtracted);
+
+                    setFormData(prev => ({
+                        ...prev,
+                        referencia: referencia || prev.referencia,
+                        // Priorizamos el monto extraído si no hay uno manual
+                        monto_bs: monto && !prev.monto_bs ? formatInput(monto.toFixed(2)) : prev.monto_bs,
+                        fecha: fecha || prev.fecha
+                    }));
+
+                    // Si extrajimos el monto en BS y tenemos tasa, calculamos el USD
+                    if (monto && tasaBCV && !formData.monto_usd) {
+                        setFormData(prev => ({
+                            ...prev,
+                            monto_usd: formatInput((monto / tasaBCV).toFixed(2))
+                        }));
+                    }
+                }
             } else {
                 setOcrStatus('ERROR');
-                setOcrError(result.error);
+                setOcrError(result.error || "No se pudo validar la referencia en el comprobante.");
             }
         } catch (error) {
             setOcrStatus('ERROR');
@@ -261,12 +302,18 @@ const OwnerPanel = ({ data, selectedApto, setSelectedApto, onPaymentNotified, co
                         <form onSubmit={handleSubmit} className="space-y-8">
                             <div className="grid grid-cols-1 gap-6">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Fecha de Operación</label>
-                                    <input required type="date" value={formData.fecha} onChange={e => setFormData({ ...formData, fecha: e.target.value })} className="ledger-input bg-ledger-audit/50 border-slate-100 font-bold" />
+                                    <div className="flex justify-between items-center">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Fecha de Operación</label>
+                                        {extractedFields.includes('fecha') && <span className="text-[8px] bg-emerald-500 text-white px-2 py-0.5 rounded-full font-black animate-pulse">ESCANEADO</span>}
+                                    </div>
+                                    <input required type="date" value={formData.fecha} onChange={e => { setFormData({ ...formData, fecha: e.target.value }); setExtractedFields(prev => prev.filter(f => f !== 'fecha')); }} className="ledger-input bg-ledger-audit/50 border-slate-100 font-bold" />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Referencia Bancaria</label>
-                                    <input required type="text" placeholder="Últimos 6 dígitos / Ref único" value={formData.referencia} onChange={e => setFormData({ ...formData, referencia: e.target.value })} className="ledger-input bg-ledger-audit/50 border-slate-100 font-mono font-bold" />
+                                    <div className="flex justify-between items-center">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Referencia Bancaria</label>
+                                        {extractedFields.includes('referencia') && <span className="text-[8px] bg-emerald-500 text-white px-2 py-0.5 rounded-full font-black animate-pulse">ESCANEADO</span>}
+                                    </div>
+                                    <input required type="text" placeholder="Últimos 6 dígitos / Ref único" value={formData.referencia} onChange={e => { setFormData({ ...formData, referencia: e.target.value }); setExtractedFields(prev => prev.filter(f => f !== 'referencia')); }} className="ledger-input bg-ledger-audit/50 border-slate-100 font-mono font-bold" />
                                 </div>
                             </div>
 
@@ -286,18 +333,18 @@ const OwnerPanel = ({ data, selectedApto, setSelectedApto, onPaymentNotified, co
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em] ml-1">Monto Equivalente (Bs)</label>
-                                    <div className="relative group">
-                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-black text-sm uppercase group-focus-within:text-emerald-600">Bs</span>
-                                        <input
-                                            required
-                                            type="text"
-                                            placeholder="0,00"
-                                            value={formData.monto_bs}
-                                            onChange={e => handleBsChange(e.target.value)}
-                                            className="ledger-input pl-12 bg-emerald-50/30 border-emerald-100 focus:border-emerald-600 text-xl font-mono font-black text-emerald-600"
-                                        />
+                                    <div className="flex justify-between items-center">
+                                        <label className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em] ml-1">Monto en Bolívares (Bs)</label>
+                                        {extractedFields.includes('monto_bs') && <span className="text-[8px] bg-emerald-500 text-white px-2 py-0.5 rounded-full font-black animate-pulse">ESCANEADO</span>}
                                     </div>
+                                    <input
+                                        required
+                                        type="text"
+                                        placeholder="0,00"
+                                        value={formData.monto_bs}
+                                        onChange={e => { handleBsChange(e.target.value); setExtractedFields(prev => prev.filter(f => f !== 'monto_bs')); }}
+                                        className="ledger-input pl-12 bg-emerald-50/30 border-emerald-100 focus:border-emerald-600 text-xl font-mono font-black text-emerald-600"
+                                    />
                                 </div>
                             </div>
 

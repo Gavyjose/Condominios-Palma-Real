@@ -8,6 +8,7 @@ const multer = require('multer');
 const xlsx = require('xlsx');
 const Tesseract = require('tesseract.js');
 const fs = require('fs');
+const pdf = require('pdf-parse');
 const { readBCVFromTelegram } = require('./utils/telegramBCVReader');
 
 const app = express();
@@ -369,19 +370,73 @@ app.delete('/api/apartamentos/:id', authenticateToken, (req, res) => {
     });
 });
 app.get('/api/resumen', (req, res) => {
+    const { mes_anio } = req.query; // Formato: "2026-02"
+
     const query = `
         SELECT 
             (SELECT SUM(monto_usd) FROM reserva) as fondoReserva,
             (SELECT SUM(alicuota_usd) - SUM(monto_pagado_usd) FROM cobranzas) as cuentasPorCobrar,
             (SELECT SUM(monto_bs) FROM reserva WHERE tipo = 'ENTRADA') as efectivoCajaBs
     `;
+
     db.get(query, (err, row) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json({
-            fondoReserva: row.fondoReserva || 0,
-            cuentasPorCobrar: row.cuentasPorCobrar || 0,
-            efectivoCajaBs: row.efectivoCajaBs || 0,
-            totalCirculanteUSD: (row.fondoReserva || 0) + (row.cuentasPorCobrar || 0)
+
+        // Calcular promedio_alicuota para el mes solicitado
+        const fechaLike = mes_anio ? `${mes_anio}%` : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}%`;
+
+        // Obtener condominio activo
+        db.get("SELECT id FROM condominios WHERE activo = 1", (err, condoRow) => {
+            if (err || !condoRow) {
+                // Si no hay condominio, devolver solo los datos básicos
+                return res.json({
+                    fondoReserva: row.fondoReserva || 0,
+                    cuentasPorCobrar: row.cuentasPorCobrar || 0,
+                    efectivoCajaBs: row.efectivoCajaBs || 0,
+                    totalCirculanteUSD: (row.fondoReserva || 0) + (row.cuentasPorCobrar || 0),
+                    promedio_alicuota: 0
+                });
+            }
+
+            const condoId = condoRow.id;
+
+            // Obtener total de gastos del mes
+            db.get(
+                `SELECT COALESCE(SUM(monto_usd), 0) as total_gastos FROM gastos WHERE condominio_id = ? AND fecha LIKE ?`,
+                [condoId, fechaLike],
+                (err, gastosRow) => {
+                    if (err) {
+                        return res.json({
+                            fondoReserva: row.fondoReserva || 0,
+                            cuentasPorCobrar: row.cuentasPorCobrar || 0,
+                            efectivoCajaBs: row.efectivoCajaBs || 0,
+                            totalCirculanteUSD: (row.fondoReserva || 0) + (row.cuentasPorCobrar || 0),
+                            promedio_alicuota: 0
+                        });
+                    }
+
+                    // Obtener número de apartamentos
+                    db.get(
+                        `SELECT COUNT(*) as num_aptos FROM apartamentos WHERE condominio_id = ?`,
+                        [condoId],
+                        (err, aptosRow) => {
+                            const totalGastos = gastosRow ? gastosRow.total_gastos : 0;
+                            const numAptos = aptosRow ? aptosRow.num_aptos : 16;
+                            const promedioAlicuota = numAptos > 0 ? totalGastos / numAptos : 0;
+
+                            console.log(`[DEBUG SERVER] /api/resumen - Total Gastos: ${totalGastos}, Aptos: ${numAptos}, Alicuota: ${promedioAlicuota}`);
+
+                            res.json({
+                                fondoReserva: row.fondoReserva || 0,
+                                cuentasPorCobrar: row.cuentasPorCobrar || 0,
+                                efectivoCajaBs: row.efectivoCajaBs || 0,
+                                totalCirculanteUSD: (row.fondoReserva || 0) + (row.cuentasPorCobrar || 0),
+                                promedio_alicuota: promedioAlicuota
+                            });
+                        }
+                    );
+                }
+            );
         });
     });
 });
@@ -557,8 +612,34 @@ app.post('/api/pagos', (req, res) => {
     });
 });
 
+// Endpoint para Aprobar Pago (Conciliación Administrativa)
+app.patch('/api/pagos/:id/aprobar', authenticateToken, (req, res) => {
+    if (req.user.rol !== 'ADMIN') return res.status(403).json({ error: "Acceso denegado" });
+    const { id } = req.params;
+
+    db.run("UPDATE notificaciones_pago SET estatus = 'APROBADO' WHERE id = ?", [id], function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true, message: "Pago aprobado y registrado." });
+    });
+});
+
 app.get('/api/notificaciones', (req, res) => {
-    db.all("SELECT * FROM notificaciones_pago WHERE estatus = 'PENDIENTE'", (err, rows) => {
+    const { status, apto } = req.query;
+    let query = "SELECT * FROM notificaciones_pago WHERE 1=1";
+    let params = [];
+
+    if (status !== 'ALL' && status !== 'TODOS') {
+        query += " AND estatus = 'PENDIENTE'";
+    }
+
+    if (apto) {
+        query += " AND apartamento_codigo = ?";
+        params.push(apto);
+    }
+
+    query += " ORDER BY fecha_pago DESC";
+
+    db.all(query, params, (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(rows.map(r => ({ ...r, apto: r.apartamento_codigo })));
     });
@@ -585,80 +666,303 @@ app.get('/api/tasas/sync', authenticateToken, async (req, res) => {
 app.get('/api/tasas/:fecha', async (req, res) => {
     const { fecha } = req.params;
 
-    const getNearestTasa = (targetDate, callback) => {
-        // Busca la tasa exacta o la más reciente anterior
-        db.get("SELECT * FROM tasas WHERE fecha <= ? ORDER BY fecha DESC LIMIT 1", [targetDate], callback);
+    const findInDB = (date) => {
+        return new Promise((resolve, reject) => {
+            db.get("SELECT * FROM tasas WHERE fecha <= ? ORDER BY fecha DESC LIMIT 1", [date], (err, row) => {
+                if (err) reject(err);
+                else resolve(row);
+            });
+        });
     };
 
-    // 1. Buscar en DB primero (exacta)
-    db.get("SELECT * FROM tasas WHERE fecha = ?", [fecha], async (err, row) => {
-        if (err) return res.status(500).json({ error: err.message });
+    try {
+        // 1. Intentar buscar en DB (exacta o más cercana anterior)
+        const row = await findInDB(fecha);
 
-        if (row) return res.json(row);
+        if (row) {
+            const isExact = row.fecha === fecha;
+            const targetDate = new Date(fecha + 'T12:00:00');
+            const dayOfWeek = targetDate.getDay(); // 0=Dom, 6=Sab
 
-        // 2. Si no existe exacta, intentar sincronizar con Telegram
-        console.log(`[BCV] Tasa exacta no encontrada para ${fecha}. Buscando en Telegram...`);
+            // Si es exacta, o si es fin de semana y la tasa es reciente (viernes/jueves)
+            // devolvemos de inmediato para no bloquear la UI con el OCR lento.
+            if (isExact || dayOfWeek === 0 || dayOfWeek === 6) {
+                console.log(`[BCV] Usando tasa ${isExact ? 'exacta' : 'de fin de semana (fallback)'} para ${fecha}: ${row.valor}`);
+                return res.json({ ...row, exacto: isExact });
+            }
+        }
+
+        // 2. Si no es exacta y no es fin de semana (o no hay ninguna tasa cercana), 
+        // intentamos sincronizar con Telegram por si es un día laborable y no la tenemos en DB.
+        console.log(`[BCV] Tasa no encontrada o requiere actualización para ${fecha}. Sincronizando con Telegram...`);
         try {
             const nuevasTasas = await readBCVFromTelegram(15);
             if (nuevasTasas.length > 0) {
                 const stmt = db.prepare("INSERT OR IGNORE INTO tasas (fecha, valor) VALUES (?, ?)");
                 nuevasTasas.forEach(t => stmt.run(t.fecha, t.valor));
-                stmt.finalize();
+                await new Promise(resolve => stmt.finalize(resolve));
             }
-
-            // 3. Volver a buscar (intentar exacta, si no, la más cercana anterior)
-            getNearestTasa(fecha, (err, finalRow) => {
-                if (err) return res.status(500).json({ error: err.message });
-                if (finalRow) {
-                    res.json({ ...finalRow, exacto: finalRow.fecha === fecha });
-                } else {
-                    res.status(404).json({ error: "No hay ninguna tasa disponible en el sistema" });
-                }
-            });
-        } catch (error) {
-            console.error("Error en búsqueda automática BCV:", error);
-            res.status(500).json({ error: "Error al intentar sincronizar con Telegram", details: error.message });
+        } catch (syncErr) {
+            console.error("[BCV Sync Error] Falló sincronización, se intentará fallback local:", syncErr.message);
         }
-    });
+
+        // 3. Volver a buscar la más cercana después de sincronizar (o si falló la sincronización)
+        const finalRow = await findInDB(fecha);
+        if (finalRow) {
+            res.json({ ...finalRow, exacto: finalRow.fecha === fecha });
+        } else {
+            res.status(404).json({ error: "No hay ninguna tasa disponible en el sistema" });
+        }
+    } catch (error) {
+        console.error("[BCV Global Error]", error);
+        res.status(500).json({ error: "Error interno del servidor al procesar tasa" });
+    }
 });
 
 // --- MÓDULO DE CONCILIACIÓN Y OCR ---
 
 // 1. Carga de Estado de Cuenta (ADMIN)
-app.post('/api/admin/upload-banco', authenticateToken, upload.single('archivo'), (req, res) => {
+app.post('/api/admin/upload-banco', authenticateToken, upload.single('archivo'), async (req, res) => {
     if (req.user.rol !== 'ADMIN') return res.status(403).json({ error: "Acceso denegado" });
     if (!req.file) return res.status(400).json({ error: "No se subió ningún archivo" });
 
+    const isPDF = req.file.mimetype === 'application/pdf' || req.file.originalname.toLowerCase().endsWith('.pdf');
+
     try {
-        const workbook = xlsx.readFile(req.file.path);
-        const sheetName = workbook.SheetNames[0];
-        const rows = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
+        let movimientos = [];
+        let totalComisiones = 0;
 
-        // Procesar filas (Esperamos columnas: Fecha, Referencia, Monto)
-        const stmt = db.prepare("INSERT OR IGNORE INTO movimientos_bancarios (fecha, referencia, monto) VALUES (?, ?, ?)");
+        if (isPDF) {
+            console.log(`[BANCO] Recibido archivo PDF: ${req.file.originalname} (${req.file.size} bytes)`);
+            if (!fs.existsSync('uploads')) fs.mkdirSync('uploads');
 
-        rows.forEach(row => {
-            // Normalizar nombres de columnas comunes
-            const fecha = row.Fecha || row.FECHA || row.date;
-            const referencia = String(row.Referencia || row.REFERENCIA || row.ref || row.Referencia_Recibo || '');
-            const monto = parseFloat(String(row.Monto || row.MONTO || row.amount || 0).replace(',', '.'));
-
-            if (referencia && monto) {
-                stmt.run(fecha, referencia, monto);
+            const dataBuffer = fs.readFileSync(req.file.path);
+            let data;
+            try {
+                data = await pdf(dataBuffer);
+            } catch (pdfErr) {
+                console.error("[BANCO] Fallo crítico de pdf-parse:", pdfErr);
+                throw new Error("No se pudo leer el contenido del PDF.");
             }
-        });
 
-        stmt.finalize();
-        fs.unlinkSync(req.file.path); // Borrar archivo temporal
+            const text = data.text;
+            fs.writeFileSync('uploads/debug_banco.txt', text);
+            console.log(`[BANCO] Auditoría: Texto de PDF capturado (${text.length} caracteres).`);
 
-        // Disparar conciliación automática tras carga
-        ejecutarConciliacionGlobal((err) => {
-            if (err) return res.status(500).json({ error: "Carga exitosa pero falló conciliación: " + err.message });
-            res.json({ success: true, message: "Estado de cuenta procesado y conciliado de forma global." });
+            // MOTOR V3: Búsqueda Global por Patrones segmentados por Fecha
+            const dateMatches = [...text.matchAll(/(\d{2}\/\d{2}\/\d{4})/g)];
+            console.log(`[BANCO] Se encontraron ${dateMatches.length} posibles fechas.`);
+
+            dateMatches.forEach((dMatch, index) => {
+                const dateStr = dMatch[1];
+                const datePos = dMatch.index;
+                const nextDatePos = dateMatches[index + 1] ? dateMatches[index + 1].index : text.length;
+
+                const segment = text.substring(datePos, nextDatePos);
+                const refMatch = segment.match(/\d{8,13}/);
+                const amountMatch = segment.match(/[\d\.]+\,\d{2}/);
+
+                if (refMatch && amountMatch) {
+                    const referencia = refMatch[0];
+                    const montoRaw = amountMatch[0];
+                    const monto = parseFloat(montoRaw.replace(/\./g, '').replace(',', '.'));
+
+                    const [d, m, y] = dateStr.split('/');
+                    const fecha = `${y}-${m}-${d}`;
+
+                    const segUpper = segment.toUpperCase();
+                    const isComision = /COMISION|COMISIÓN|IVA|RETENCION/.test(segUpper);
+                    const isCargo = isComision || /DEBITO|TARJETA|REVERSO|PAGO SERVICIO/.test(segUpper);
+
+                    const montoFinal = isCargo ? -Math.abs(monto) : Math.abs(monto);
+
+                    if (isComision) {
+                        totalComisiones += Math.abs(monto);
+                    }
+
+                    if (!movimientos.find(m => m.referencia === referencia && m.monto === montoFinal)) {
+                        movimientos.push({ fecha, referencia, monto: montoFinal });
+                    }
+                }
+            });
+            console.log(`[BANCO] Motor V3 completado. ${movimientos.length} transacciones detectadas.`);
+        } else {
+            console.log("[BANCO] Procesando Estado de Cuenta Excel (Motor Robusto)...");
+            const workbook = xlsx.readFile(req.file.path);
+            const sheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[sheetName];
+
+            // Leer como arreglo de arreglos para buscar la cabecera dinámicamente
+            const data = xlsx.utils.sheet_to_json(sheet, { header: 1 });
+            console.log(`[BANCO] Excel cargado: ${data.length} filas brutas.`);
+
+            let headerRowIndex = -1;
+            let colMap = { fecha: -1, referencia: -1, monto: -1, descripcion: -1 };
+
+            // 1. Localizar fila de cabecera y mapear columnas
+            for (let i = 0; i < Math.min(20, data.length); i++) {
+                const row = data[i];
+                if (!row || !Array.isArray(row)) continue;
+
+                const lowerRow = row.map(cell => String(cell || '').toUpperCase());
+                const fIdx = lowerRow.findIndex(c => c && c.includes('FECHA'));
+                const rIdx = lowerRow.findIndex(c => c && c.includes('REFERENCIA'));
+                const mIdx = lowerRow.findIndex(c => c && c.includes('MONTO'));
+                const dIdx = lowerRow.findIndex(c => c && (c.includes('DESC') || c.includes('CONCEP') || c.includes('DETALLE')));
+
+                if (fIdx !== -1 && rIdx !== -1 && mIdx !== -1) {
+                    headerRowIndex = i;
+                    colMap = { fecha: fIdx, referencia: rIdx, monto: mIdx, descripcion: dIdx };
+                    console.log(`[BANCO] Cabecera encontrada en fila ${i}:`, colMap);
+                    break;
+                }
+            }
+
+            if (headerRowIndex !== -1) {
+                // 2. Procesar filas de datos desde la siguiente a la cabecera
+                for (let i = headerRowIndex + 1; i < data.length; i++) {
+                    const row = data[i];
+                    if (!row || row.length === 0) continue;
+
+                    let fechaRaw = row[colMap.fecha];
+                    let refRaw = row[colMap.referencia];
+                    let montoRaw = row[colMap.monto];
+                    let descRaw = colMap.descripcion !== -1 ? row[colMap.descripcion] : '';
+
+                    if (!fechaRaw || !refRaw || montoRaw === undefined) continue;
+
+                    // Normalizar Fecha
+                    let fecha = String(fechaRaw);
+                    if (fecha.includes('/')) {
+                        const [d, m, y] = fecha.split('/');
+                        fecha = `${y}-${m}-${d}`;
+                    }
+
+                    // Normalizar Referencia
+                    const referencia = String(refRaw).trim();
+
+                    // Normalizar Monto (Robustez ante strings y formatos mixtos)
+                    const cleanMonto = (v) => {
+                        if (typeof v === 'number') return v;
+                        let s = String(v || '0').replace(/\s/g, '');
+                        if (s.includes(',') && s.includes('.')) s = s.replace(/\./g, '').replace(',', '.');
+                        else if (s.includes(',')) s = s.replace(',', '.');
+                        return parseFloat(s);
+                    };
+                    let monto = cleanMonto(montoRaw);
+
+                    // Identificar comisiones (insensible a acentos)
+                    const descUpper = String(descRaw || '').toUpperCase();
+                    if (/COMISION|COMISIÓN|IVA|RETENCION/.test(descUpper)) {
+                        totalComisiones += Math.abs(monto);
+                    }
+
+                    // Ignorar la fila de Saldo Final si tiene referencia de ceros
+                    if (referencia && !isNaN(monto) && referencia !== '000000000000000') {
+                        movimientos.push({ fecha, referencia, monto });
+                    }
+                }
+            } else {
+                console.warn("[BANCO] Fallback: No se detectó cabecera, intentando lectura simple.");
+                const simpleRows = xlsx.utils.sheet_to_json(sheet);
+                simpleRows.forEach(row => {
+                    const fecha = row.Fecha || row.FECHA || row.date;
+                    const referencia = String(row.Referencia || row.REFERENCIA || row.ref || '');
+
+                    const cleanMontoSimple = (v) => {
+                        if (typeof v === 'number') return v;
+                        let s = String(v || '0').replace(/\s/g, '');
+                        if (s.includes(',') && s.includes('.')) s = s.replace(/\./g, '').replace(',', '.');
+                        else if (s.includes(',')) s = s.replace(',', '.');
+                        return parseFloat(s);
+                    };
+                    const monto = cleanMontoSimple(row.Monto || row.MONTO || 0);
+
+                    const desc = String(row.Descripcion || row.DESCRIPCION || row.Concepto || row.CONCEPTO || '');
+                    if (/COMISION|COMISIÓN|IVA|RETENCION/.test(desc.toUpperCase())) {
+                        totalComisiones += Math.abs(monto);
+                    }
+
+                    if (referencia && monto) movimientos.push({ fecha, referencia, monto });
+                });
+            }
+            console.log(`[BANCO] Excel procesado. ${movimientos.length} movimientos detectados.`);
+        }
+
+        // Insertar en Base de Datos con Auditoría
+        if (movimientos.length === 0) {
+            console.warn("[BANCO] No se detectaron movimientos para insertar.");
+        }
+
+        const stmt = db.prepare("INSERT OR IGNORE INTO movimientos_bancarios (fecha, referencia, monto) VALUES (?, ?, ?)");
+        let insertCount = 0;
+
+        db.serialize(() => {
+            movimientos.forEach(m => {
+                stmt.run(m.fecha, m.referencia, m.monto, function (err) {
+                    if (err) console.error(`[BANCO DB ERROR] Ref ${m.referencia}:`, err.message);
+                    else if (this.changes > 0) insertCount++;
+                });
+            });
+
+            stmt.finalize(() => {
+                console.log(`[BANCO] Resumen DB: ${insertCount} movimientos nuevos registrados. Comisiones: ${totalComisiones}`);
+
+                if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+
+                // --- AUTOMATIZACIÓN: Registro de Gasto por Comisiones ---
+                if (totalComisiones > 0) {
+                    db.get("SELECT id FROM condominios WHERE activo = 1", (err, condo) => {
+                        const condoId = condo ? condo.id : 1;
+                        const mesAnio = new Date().toISOString().slice(0, 7);
+                        const fechaPrimero = `${mesAnio}-01`;
+                        const fechaHoy = new Date().toISOString().slice(0, 10);
+
+                        // Buscar tasa del primero del mes (o la más cercana anterior)
+                        db.get("SELECT valor FROM tasas WHERE fecha <= ? ORDER BY fecha DESC LIMIT 1", [fechaPrimero], (err, tasaRow) => {
+                            const tasa = tasaRow ? tasaRow.valor : 36.5; // Fallback
+                            const montoUsd = totalComisiones / tasa;
+
+                            // Verificar si ya existe la comisión para este mes
+                            db.get("SELECT id FROM gastos WHERE condominio_id = ? AND mes_anio = ? AND concepto = 'COMISIÓN BANCÁRIA'",
+                                [condoId, mesAnio], (err, existing) => {
+                                    if (existing) {
+                                        // Actualizar (PRESERVANDO monto_usd / Estimado $)
+                                        db.run(`UPDATE gastos SET 
+                                            monto_bs = ?, tasa_bcv = ?, 
+                                            monto_pagado_bs = ?, monto_pagado_usd = ?, 
+                                            fecha_pago = ?, comprobante_url = 'Edo Cta', referencia = 'SISTEMA'
+                                            WHERE id = ?`,
+                                            [totalComisiones, tasa, totalComisiones, montoUsd, fechaHoy, existing.id]);
+                                    } else {
+                                        // Insertar (Nuevo registro con monto_usd inicial igual al primer cálculo)
+                                        db.run(`INSERT INTO gastos (condominio_id, mes_anio, concepto, monto_usd, monto_bs, tasa_bcv, monto_pagado_bs, monto_pagado_usd, fecha_pago, comprobante_url, referencia, status_banco) 
+                                            VALUES (?, ?, 'COMISIÓN BANCÁRIA', ?, ?, ?, ?, ?, ?, 'Edo Cta', 'SISTEMA', 'VERIFICADO')`,
+                                            [condoId, mesAnio, montoUsd, totalComisiones, tasa, totalComisiones, montoUsd, fechaHoy]);
+                                    }
+                                });
+                        });
+                    });
+                }
+
+                // Disparar conciliación automática
+                ejecutarConciliacionGlobal((err) => {
+                    if (err) return res.status(500).json({ error: "Procesado pero falló conciliación: " + err.message });
+                    res.json({
+                        success: true,
+                        detected: movimientos.length,
+                        newlyInserted: insertCount,
+                        totalComisiones: totalComisiones,
+                        message: `Conciliación terminada: ${movimientos.length} detectados, ${insertCount} nuevos. Total Comisiones: ${totalComisiones.toFixed(2)}`
+                    });
+                });
+            });
         });
 
     } catch (error) {
-        res.status(500).json({ error: "Error procesando Excel: " + error.message });
+        console.error("[BANCO ERROR CRÍTICO]", error);
+        if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+        res.status(500).json({ error: "Error procesando archivo: " + error.message });
     }
 });
 
@@ -773,9 +1077,16 @@ app.get('/api/reportes/sabana', authenticateToken, (req, res) => {
                     // Calculamos el total de gastos del mes y dividimos entre total aptos (o alícuota específica)
                     // Por ahora: Equitativo
                     const promiseGastos = new Promise((resolve, reject) => {
+                        console.log(`[DEBUG SERVER] Consultando gastos para alicuota. Condo: ${condoId}, FechaLike: ${fechaLike}`);
                         db.get(`SELECT COALESCE(SUM(monto_usd), 0) as total_gastos FROM gastos WHERE condominio_id = ? AND fecha LIKE ?`, [condoId, fechaLike], (err, row) => {
-                            if (err) reject(err);
-                            resolve((row ? row.total_gastos : 0) / aptos.length); // Alicuota simple
+                            if (err) {
+                                console.error("[DEBUG SERVER] Error en query gastos:", err);
+                                reject(err);
+                            }
+                            const totalGastos = row ? row.total_gastos : 0;
+                            const alicuota = totalGastos / (aptos.length || 1);
+                            console.log(`[DEBUG SERVER] Total Gastos: ${totalGastos}, Aptos: ${aptos.length}, Alicuota Calc: ${alicuota}`);
+                            resolve(alicuota);
                         });
                     });
 
@@ -1038,7 +1349,7 @@ app.get('/api/cierres/:id/detalle', (req, res) => {
     });
 });
 
-// 2. Validación de Comprobante por OCR (OWNER)
+// 2. Validación de Comprobante por OCR (OWNER) con Extracción Inteligente
 app.post('/api/pagos/validate-receipt', authenticateToken, upload.single('imagen'), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: "No se subió la imagen del comprobante" });
     const { referenciaManual, montoManual } = req.body;
@@ -1047,60 +1358,189 @@ app.post('/api/pagos/validate-receipt', authenticateToken, upload.single('imagen
         const { data: { text } } = await Tesseract.recognize(req.file.path, 'spa');
         fs.unlinkSync(req.file.path);
 
-        const refEncontrada = text.includes(referenciaManual);
+        console.log("[OCR DEBUG] Texto extraído:", text.substring(0, 500) + "...");
 
-        // Extraer números potenciales del texto (secuencias de 4 o más dígitos)
-        const numerosDetectados = text.match(/\d{4,}/g) || [];
-        const listaNumeros = [...new Set(numerosDetectados)].join(', ');
+        // --- EXTRACCIÓN INTELIGENTE ---
 
-        // Búsqueda flexible de monto
+        // 1. Extraer Referencia (Buscamos números de 6 a 12 dígitos)
+        const refPatterns = [
+            /(?:Ref|Referencia|Nro|Número|Confirmación|Transacción)[:\s]*(\d{6,12})/i,
+            /(\d{6,12})/
+        ];
+        let refExtraida = null;
+        for (const pattern of refPatterns) {
+            const match = text.match(pattern);
+            if (match) { refExtraida = match[1]; break; }
+        }
+
+        // 2. Extraer Fecha (DD/MM/YYYY, DD-MM-YYYY, DD/MM/YY)
+        const datePattern = /(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/;
+        const dateMatch = text.match(datePattern);
+        let fechaExtraida = null;
+        if (dateMatch) {
+            let [_, day, month, year] = dateMatch;
+            if (year.length === 2) year = "20" + year;
+            fechaExtraida = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+        }
+
+        // 3. Extraer Monto (Buscamos números con decimales , o .)
+        const amountPatterns = [
+            /(?:Monto|Importe|Total|Pagado|Bs|USD)[:\s]*([\d\.,]+)/i,
+            /([\d\.,]+)/
+        ];
+        let montoExtraido = null;
+        for (const pattern of amountPatterns) {
+            const matches = text.matchAll(new RegExp(pattern, 'gi'));
+            for (const m of matches) {
+                let valStr = m[1].replace(/\./g, '').replace(',', '.');
+                let val = parseFloat(valStr);
+                // Filtramos montos muy pequeños o inválidos para evitar detectar números de cuenta/fechas como montos
+                if (val > 1) {
+                    montoExtraido = val;
+                    // Si el patrón encontró una etiqueta de "monto", priorizamos este resultado
+                    if (pattern.source.includes('Monto|Importe')) break;
+                }
+            }
+            if (montoExtraido) break;
+        }
+
+        // --- VALIDACIÓN ---
+        // Función para comparar solo los últimos 6 dígitos (Flexibilidad bancaria)
+        const matchLast6 = (r1, r2) => {
+            if (!r1 || !r2) return false;
+            const c1 = String(r1).trim();
+            const c2 = String(r2).trim();
+            if (c1 === c2) return true;
+            if (c1.length >= 6 && c2.length >= 6) return c1.slice(-6) === c2.slice(-6);
+            return false;
+        };
+
+        const refValida = matchLast6(referenciaManual, refExtraida) || (referenciaManual && text.includes(referenciaManual));
+
+        // Búsqueda flexible de monto manual
         const montoLimpio = String(montoManual).replace('.', ',');
         const montoEncontrado = text.includes(montoLimpio) || text.includes(String(montoManual));
 
-        if (refEncontrada) {
-            res.json({
-                valid: true,
-                message: "Referencia validada por imagen",
-                montoMatch: montoEncontrado
-            });
-        } else {
-            console.log(`[OCR Fail] Referencia ${referenciaManual} no hallada. Detectado: ${listaNumeros}`);
-            const errorMsg = listaNumeros
-                ? `El número de referencia ${referenciaManual} no coincide. En el comprobante detectamos: [${listaNumeros}]. Por favor, verifícalo.`
-                : "El número de referencia ingresado no coincide con el que aparece en el comprobante. Por favor, asegúrate de que la imagen sea legible.";
+        res.json({
+            valid: refValida,
+            extracted: {
+                referencia: refExtraida,
+                monto: montoExtraido,
+                fecha: fechaExtraida
+            },
+            montoMatch: montoEncontrado,
+            message: refValida ? "Referencia validada" : "Referencia no encontrada en la imagen"
+        });
 
-            res.json({
-                valid: false,
-                error: errorMsg
-            });
-        }
     } catch (error) {
+        console.error("OCR Error:", error);
         res.status(500).json({ error: "Error en OCR: " + error.message });
+    }
+});
+
+// 3. Analítica y Proyecciones
+app.get('/api/analytics/projections', authenticateToken, async (req, res) => {
+    try {
+        const queryGastos = `
+            SELECT mes_anio, SUM(monto_usd) as total_usd 
+            FROM gastos 
+            GROUP BY mes_anio 
+            ORDER BY mes_anio DESC
+        `;
+
+        db.all(queryGastos, [], (err, rows) => {
+            if (err) return res.status(500).json({ error: err.message });
+
+            const numMeses = rows.length;
+            const promedioGastos = numMeses > 0
+                ? rows.reduce((acc, row) => acc + row.total_usd, 0) / numMeses
+                : 0;
+
+            const proyeccionProximoMes = promedioGastos * 1.10;
+
+            const queryAnomalias = `
+                SELECT concepto, monto_usd, mes_anio 
+                FROM gastos 
+                WHERE monto_usd > ?
+                ORDER BY monto_usd DESC LIMIT 5
+            `;
+
+            db.all(queryAnomalias, [promedioGastos * 0.5 || 100], (err, anomalias) => {
+                if (err) return res.status(500).json({ error: err.message });
+
+                const mesActual = new Date().toISOString().slice(0, 7);
+                const queryCobranza = `
+                    SELECT SUM(monto) as total_ingresado 
+                    FROM notificaciones_pago 
+                    WHERE estatus = 'APROBADO' AND strftime('%Y-%m', fecha_pago) = ?
+                `;
+
+                db.get(queryCobranza, [mesActual], (err, cobranza) => {
+                    const ingresos = cobranza?.total_ingresado || 0;
+                    const egresosMesActual = rows.find(r => r.mes_anio === mesActual)?.total_usd || 0;
+
+                    const saludFinanciera = egresosMesActual > 0
+                        ? (ingresos / egresosMesActual) * 100
+                        : 100;
+
+                    res.json({
+                        promedio: promedioGastos,
+                        proyeccion: proyeccionProximoMes,
+                        anomalias: anomalias,
+                        salud: Math.min(saludFinanciera, 100).toFixed(2),
+                        mesActual: mesActual,
+                        confianza: numMeses >= 3 ? 'ALTA' : 'BAJA'
+                    });
+                });
+            });
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 });
 
 // Función auxiliar de Conciliación
 function ejecutarConciliacionGlobal(callback) {
-    db.all("SELECT id, referencia, monto FROM notificaciones_pago WHERE status_banco = 'PENDIENTE'", (err, notifis) => {
-        if (err) return callback(err);
-
-        if (!notifis || notifis.length === 0) return callback(null);
-
-        let procesadas = 0;
-        notifis.forEach(n => {
-            // Buscamos coincidencia de referencia en el banco
-            db.get("SELECT monto FROM movimientos_bancarios WHERE referencia LIKE ?", [`%${n.referencia}%`], (err, mov) => {
-                let nuevoStatus = 'PENDIENTE';
-                if (mov) {
-                    // Verificación de monto (margen de error de 0.01 por decimales)
-                    nuevoStatus = (Math.abs(mov.monto - n.monto) < 0.01) ? 'VERIFICADO' : 'ERROR_MONTO';
-                }
-
-                db.run("UPDATE notificaciones_pago SET status_banco = ? WHERE id = ?", [nuevoStatus, n.id], () => {
-                    procesadas++;
-                    if (procesadas === notifis.length) callback(null);
+    db.serialize(() => {
+        // 1. Conciliar Ingresos (Notificaciones de Pago)
+        // Incluimos ERROR_MONTO para re-evaluar si llega el movimiento correcto
+        db.all("SELECT id, referencia, monto, monto_bs FROM notificaciones_pago WHERE status_banco IN ('PENDIENTE', 'ERROR_MONTO')", (err, notifis) => {
+            if (err) return callback(err);
+            if (notifis && notifis.length > 0) {
+                notifis.forEach(n => {
+                    const refBusqueda = n.referencia.length >= 6 ? n.referencia.slice(-6) : n.referencia;
+                    // Búsqueda más flexible en la referencia para evitar fallos por ceros a la izquierda o prefijos
+                    db.get("SELECT monto FROM movimientos_bancarios WHERE referencia LIKE ?", [`%${refBusqueda}`], (err, mov) => {
+                        if (mov) {
+                            const montoBanco = Math.abs(mov.monto);
+                            const montoNotif = Math.abs(n.monto_bs); // ✅ USAR MONTO EN BOLÍVARES
+                            const diff = Math.abs(montoBanco - montoNotif);
+                            const nuevoStatus = (diff < 0.1) ? 'VERIFICADO' : 'ERROR_MONTO';
+                            console.log(`[CONCILIACIÓN] Notif ID:${n.id} | Ref:${n.referencia} (6dig:${refBusqueda}) | Banco:${montoBanco} Bs vs Notif:${montoNotif} Bs | Diff:${diff.toFixed(2)} → ${nuevoStatus}`);
+                            db.run("UPDATE notificaciones_pago SET status_banco = ? WHERE id = ?", [nuevoStatus, n.id]);
+                        }
+                    });
                 });
-            });
+            }
+        });
+
+        // 2. Conciliar Egresos (Gastos)
+        db.all("SELECT id, referencia, monto_pagado_bs FROM gastos WHERE status_banco = 'PENDIENTE' AND referencia IS NOT NULL AND referencia != ''", (err, gastos) => {
+            if (err) return callback(err);
+            if (gastos && gastos.length > 0) {
+                gastos.forEach(g => {
+                    const refBusqueda = g.referencia.length >= 6 ? g.referencia.slice(-6) : g.referencia;
+                    db.get("SELECT monto FROM movimientos_bancarios WHERE referencia LIKE ?", [`%${refBusqueda}`], (err, mov) => {
+                        if (mov) {
+                            const montoBanco = Math.abs(mov.monto);
+                            const cargoCoincide = (Math.abs(montoBanco - g.monto_pagado_bs) < 0.05);
+                            const nuevoStatus = cargoCoincide ? 'VERIFICADO' : 'ERROR_MONTO';
+                            db.run("UPDATE gastos SET status_banco = ? WHERE id = ?", [nuevoStatus, g.id]);
+                        }
+                    });
+                });
+            }
+            setTimeout(() => callback(null), 1000);
         });
     });
 }

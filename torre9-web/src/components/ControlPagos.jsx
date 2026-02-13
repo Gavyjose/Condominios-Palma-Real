@@ -33,21 +33,26 @@ const ControlPagos = ({ data }) => {
         setSelectedUnit(apto);
 
         try {
-            // Intentar cargar datos reales si la API los soporta, 
-            // de lo contrario usar mock basado en el resumen de cobranza
-            const resp = await fetch(`${API_URL}/notificaciones?apto=${apto}`);
+            // Cargar notificaciones filtradas por apartamento
+            const resp = await fetch(`${API_URL}/notificaciones?apto=${apto}&status=ALL`);
             const logs = await resp.json();
 
             const unitInfo = units.find(u => u.apto === apto);
+
+            const alicuotaMensual = parseFloat(data?.resumen?.promedio_alicuota) || 0;
+            const deudaPrevia = parseFloat(unitInfo?.deuda) || 0;
+            const deudaInicial = deudaPrevia + alicuotaMensual;
+            const totalAbonado = logs.reduce((sum, l) => sum + (parseFloat(l.monto) || 0), 0);
+            const saldoPendiente = deudaInicial - totalAbonado;
 
             // Construir objeto de ledger dinámico
             setLedgerData({
                 apto: apto,
                 propietario: unitInfo?.propietario || "PROPIETARIO NO REGISTRADO",
                 resumen: {
-                    deuda_inicial: unitInfo?.deuda_acumulada || 0,
-                    total_pagado_usd: unitInfo?.pagado || 0,
-                    saldo_pendiente: unitInfo?.saldo || 0
+                    deuda_inicial: deudaInicial,
+                    total_pagado_usd: totalAbonado,
+                    saldo_pendiente: saldoPendiente
                 },
                 movimientos: logs.map(l => ({
                     id: l.id,
@@ -55,9 +60,10 @@ const ControlPagos = ({ data }) => {
                     concepto: `ABONO - REF #${l.referencia}`,
                     tipo: "ABONO",
                     monto_usd: l.monto,
-                    tasa_bcv: 36.5, // Tasa genérica si no viene en log
-                    monto_bs: l.monto * 36.5,
-                    balance: 0 // Cálculo dinámico abajo
+                    tasa_bcv: l.tasa_bcv || 0,
+                    monto_bs: l.monto_bs || (l.monto * (l.tasa_bcv || 0)),
+                    referencia: l.referencia,
+                    balance: 0
                 }))
             });
         } catch (err) {

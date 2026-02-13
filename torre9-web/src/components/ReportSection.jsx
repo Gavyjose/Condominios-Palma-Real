@@ -22,88 +22,195 @@ const formatNumber = (num) => {
 // --- PDF GENERATION UTILITIES ---
 const generatePDF = {
     header: (doc, title, config = null) => {
-        doc.setFontSize(16);
-        doc.setTextColor(30, 41, 59);
+        // Fondo decorativo en la cabecera
+        doc.setFillColor(30, 41, 59);
+        doc.rect(0, 0, 210, 40, 'F');
+
+        doc.setFontSize(18);
+        doc.setTextColor(255, 255, 255);
+        doc.setFont("helvetica", "bold");
         const nombreCondominio = config?.nombre_condominio || "CONDOMINIO RESIDENCIA PALMA REAL";
-        const nombreTorre = config?.nombre_torre ? ` ${config.nombre_torre}` : "";
-        doc.text(`${nombreCondominio}${nombreTorre}`, 105, 20, { align: "center" });
+        doc.text(nombreCondominio.toUpperCase(), 105, 18, { align: "center" });
+
         doc.setFontSize(10);
-        doc.text(`REPORTE: ${title}`, 105, 28, { align: "center" });
+        doc.setFont("helvetica", "normal");
+        const nombreTorre = config?.nombre_torre ? `SECTOR: ${config.nombre_torre}` : "ADMINISTRACIÓN CENTRAL";
+        doc.text(nombreTorre.toUpperCase(), 105, 25, { align: "center" });
+
+        doc.setFontSize(9);
+        doc.setTextColor(200, 200, 200);
+        doc.text(`DOCUMENTO OFICIAL: ${title}`, 105, 32, { align: "center" });
+
+        // Línea de base
+        doc.setDrawColor(30, 41, 59);
+        doc.setLineWidth(0.5);
+        doc.line(15, 45, 195, 45);
+
+        doc.setTextColor(100, 116, 139);
         doc.setFontSize(8);
-        doc.text(`Fecha de Emisión: ${new Date().toLocaleDateString()}`, 105, 33, { align: "center" });
-        doc.setDrawColor(226, 232, 240);
-        doc.line(20, 36, 190, 36);
+        doc.text(`Generado el: ${new Date().toLocaleDateString()} - ${new Date().toLocaleTimeString()}`, 195, 44, { align: "right" });
+    },
+
+    footer: (doc) => {
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(150);
+            doc.text(`Página ${i} de ${pageCount} - Sistema de Gestión Torre 9`, 105, 285, { align: "center" });
+        }
     },
 
     actaEntrega: (data, config = null) => {
         const doc = new jsPDF();
-        generatePDF.header(doc, "ACTA DE ENTREGA DE FONDOS", config);
+        generatePDF.header(doc, "ACTA DE ENTREGA DE RECAUDACIÓN", config);
+
+        doc.setTextColor(30, 41, 59);
         doc.setFontSize(11);
-        doc.text("Por medio de la presente se hace entrega de los fondos recaudados al cierre del mes:", 20, 50);
+        doc.setFont("helvetica", "normal");
+        const text = "Por medio de la presente, la administración del condominio deja constancia de la entrega formal de los fondos recaudados correspondientes al cierre del periodo actual. Estos fondos han sido verificados contra los registros de cobranza y depósitos bancarios.";
+        const splitText = doc.splitTextToSize(text, 175);
+        doc.text(splitText, 20, 55);
 
         const totalBs = (data.resumen?.efectivoCajaBs || 0);
         const totalUsd = (data.resumen?.totalCirculanteUSD || 0);
 
         const tableData = [
-            ["Saldo cuotas recibidas (Condominio)", "0.00 Bs", `$${formatNumber(0)}`],
-            ["Cuotas especiales recibidas", "0.00 Bs", `$${formatNumber(0)}`],
-            ["Saldos de decimales (Cambio Divisas)", "0.00 Bs", `$${formatNumber(0)}`],
-            [{ content: "TOTAL A ENTREGAR", styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } },
-            { content: `${formatNumber(totalBs)} Bs`, styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } },
-            { content: `$${formatNumber(totalUsd)}`, styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } }]
+            ["Recaudación Mensual Condominio", "0.00 Bs", `$${formatNumber(totalUsd)}`],
+            ["Fondo de Reserva Acumulado", "0.00 Bs", `$${formatNumber(data.resumen?.fondoReserva || 0)}`],
+            ["Excedentes / Diferenciales Cambiarios", "0.00 Bs", "$0.00"],
+            [{ content: "TOTAL NETO A ENTREGAR", styles: { fontStyle: 'bold', fillColor: [30, 41, 59], textColor: [255, 255, 255] } },
+            { content: `${formatNumber(totalBs)} Bs`, styles: { fontStyle: 'bold', fillColor: [30, 41, 59], textColor: [255, 255, 255] } },
+            { content: `$${formatNumber(totalUsd)}`, styles: { fontStyle: 'bold', fillColor: [30, 41, 59], textColor: [255, 255, 255] } }]
         ];
 
         autoTable(doc, {
-            startY: 55,
-            head: [["CONCEPTOS", "BS", "DIVISAS"]],
+            startY: 75,
+            head: [["DESCRIPCIÓN DE FONDOS", "MONTO BS", "MONTO DIVISAS ($)"]],
             body: tableData,
             theme: 'grid',
-            headStyles: { fillColor: [30, 41, 59] },
+            headStyles: { fillColor: [51, 65, 85], fontStyle: 'bold', halign: 'center' },
+            columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' } },
+            styles: { cellPadding: 5 }
         });
 
+        // Sección de Firmas
+        const finalY = doc.lastAutoTable.finalY + 30;
+        doc.setDrawColor(200);
+        doc.line(30, finalY, 80, finalY);
+        doc.line(130, finalY, 180, finalY);
+
+        doc.setFontSize(9);
+        doc.text("ENTREGADO POR:", 55, finalY + 5, { align: "center" });
+        doc.text("RECIBIDO POR:", 155, finalY + 5, { align: "center" });
+        doc.setFont("helvetica", "bold");
+        doc.text("JUNTA DE CONDOMINIO", 55, finalY + 12, { align: "center" });
+        doc.text("ADMINISTRACIÓN / TESORERÍA", 155, finalY + 12, { align: "center" });
+
+        generatePDF.footer(doc);
         doc.save("Acta_Entrega_Condominio.pdf");
     },
 
     gastosMensuales: (gastos, config = null) => {
         const doc = new jsPDF();
-        generatePDF.header(doc, "RELACIÓN DE GASTOS MENSUAL", config);
-        const body = [...gastos].reverse().map(g => [g.concepto, formatNumber(g.tasa_pago || g.tasa_bcv || 0), formatNumber(g.bs || g.monto_pagado_bs || 0), `$${formatNumber(g.usd || g.monto_pagado_usd || 0)}`]);
+        generatePDF.header(doc, "RELACIÓN DETALLADA DE EGRESOS", config);
+
+        const body = [...gastos].reverse().map(g => [
+            g.concepto,
+            formatNumber(g.tasa_pago || g.tasa_bcv || 0),
+            formatNumber(g.bs || g.monto_pagado_bs || 0),
+            `$${formatNumber(g.usd || g.monto_pagado_usd || 0)}`
+        ]);
+
         const totalBs = gastos.reduce((sum, g) => sum + (g.bs || g.monto_pagado_bs || 0), 0);
         const totalUsd = gastos.reduce((sum, g) => sum + (g.usd || g.monto_pagado_usd || 0), 0);
 
-        body.push([{ content: "TOTALES", styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } }, "",
-        { content: formatNumber(totalBs), styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } },
-        { content: `$${formatNumber(totalUsd)}`, styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } }]);
-
         autoTable(doc, {
-            startY: 45,
-            head: [["CONCEPTO", "TASA BCV", "BOLIVARES (BS)", "PAGO ($)"]],
+            startY: 50,
+            head: [["CONCEPTO DEL GASTO", "TASA REF.", "BOLIVARES (BS)", "DIVISAS ($)"]],
             body: body,
             theme: 'striped',
-            headStyles: { fillColor: [30, 41, 59] },
+            headStyles: { fillColor: [30, 41, 59], halign: 'center' },
+            columnStyles: {
+                1: { halign: 'center' },
+                2: { halign: 'right' },
+                3: { halign: 'right', fontStyle: 'bold' }
+            },
+            alternateRowStyles: { fillColor: [248, 250, 252] }
         });
 
+        const totalY = doc.lastAutoTable.finalY + 10;
+        doc.setFillColor(241, 245, 249);
+        doc.rect(120, totalY, 75, 20, 'F');
+        doc.setFontSize(10);
+        doc.setTextColor(30, 41, 59);
+        doc.text("TOTAL EGRESOS DEL MES:", 125, totalY + 8);
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.text(`$${formatNumber(totalUsd)}`, 190, totalY + 15, { align: "right" });
+
+        // --- Gráfico de Análisis de Egresos ---
+        const pageHeight = doc.internal.pageSize.height;
+        let chartY = totalY + 30;
+
+        if (chartY > pageHeight - 60) {
+            doc.addPage();
+            generatePDF.header(doc, "ANÁLISIS GRÁFICO DE EGRESOS", config);
+            chartY = 60;
+        }
+
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "bold");
+        doc.text("DISTRIBUCIÓN DE LOS MAYORES EGRESOS:", 20, chartY);
+
+        const topGastos = [...gastos]
+            .sort((a, b) => (b.usd || 0) - (a.usd || 0))
+            .slice(0, 5);
+
+        const maxUsd = topGastos[0]?.usd || 1;
+
+        topGastos.forEach((g, i) => {
+            const barWidth = ((g.usd || 0) / maxUsd) * 100;
+            const barY = chartY + 10 + (i * 12);
+
+            doc.setFontSize(8);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(71, 85, 105);
+            doc.text(g.concepto.substring(0, 40).toUpperCase(), 20, barY + 5);
+
+            doc.setFillColor(30, 116, 253); // Azul corporativo
+            doc.rect(80, barY, barWidth, 6, 'F');
+
+            doc.setFont("helvetica", "bold");
+            doc.text(`$${formatNumber(g.usd)}`, 80 + barWidth + 3, barY + 5);
+        });
+
+        generatePDF.footer(doc);
         doc.save("Relacion_Gastos.pdf");
     },
 
     resumenCaja: (data, config = null) => {
         const doc = new jsPDF();
-        generatePDF.header(doc, "RESUMEN DE CIERRE Y MOVIMIENTO DE CAJA", config);
+        generatePDF.header(doc, "MOVIMIENTOS Y DISPONIBILIDAD DE CAJA", config);
+
         autoTable(doc, {
-            startY: 45,
-            head: [["RESUMEN DEL MES", "BS", "$ (USD)"]],
+            startY: 50,
+            head: [["INDICADORES DE CAJA", "BASE BOLÍVARES", "TOTAL DIVISAS ($)"]],
             body: [
-                ["SALDO INICIAL", "0.00", `$${formatNumber(0)}`], // Fallback si no hay saldo inicial real
-                ["MOVIMIENTOS DEL MES", "---", "---"],
-                ["SALDO RESERVA FINAL", "0.00", `$${formatNumber(data.resumen?.fondoReserva || 0)}`],
-                ["EFECTIVO EN CAJA", `${formatNumber(data.resumen?.efectivoCajaBs || 0)}`, "$0.00"],
-                [{ content: "TOTAL CIRCULANTE", styles: { fontStyle: 'bold' } },
-                formatNumber(data.resumen?.efectivoCajaBs || 0),
-                `$${formatNumber(data.resumen?.totalCirculanteUSD || 0)}`]
+                ["SALDO INICIAL DEL PERIODO", "0.00", `$${formatNumber(0)}`],
+                ["EGRESOS TOTALES PROCESADOS", "---", `$${formatNumber(data.gastos?.reduce((s, g) => s + (g.usd || 0), 0))}`],
+                ["FONDO DE RESERVA ACTUAL", "0.00", `$${formatNumber(data.resumen?.fondoReserva || 0)}`],
+                ["DISPONIBILIDAD EN EFECTIVO (BS)", `${formatNumber(data.resumen?.efectivoCajaBs || 0)}`, "---"],
+                [{ content: "DISPONIBILIDAD FINAL CONSOLIDADA", styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } },
+                { content: formatNumber(data.resumen?.efectivoCajaBs || 0), styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } },
+                { content: `$${formatNumber(data.resumen?.totalCirculanteUSD || 0)}`, styles: { fontStyle: 'bold', fillColor: [241, 245, 249] } }]
             ],
             theme: 'grid',
-            headStyles: { fillColor: [71, 85, 105] },
+            headStyles: { fillColor: [71, 85, 105], halign: 'center' },
+            columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' } }
         });
+
+        generatePDF.footer(doc);
         doc.save("Resumen_Caja.pdf");
     },
 

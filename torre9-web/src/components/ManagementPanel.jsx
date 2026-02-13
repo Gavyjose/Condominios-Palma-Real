@@ -41,6 +41,7 @@ const ManagementPanel = ({ data, config, onUpdate, selectedMonth, setSelectedMon
                     selectedYear={selectedYear}
                     setSelectedYear={setSelectedYear}
                     isLoading={data.isRefreshing}
+                    numApartamentos={data?.cobranzas?.length || 16}
                 />
             )}
             {activeTab === 'pagos' && <PagosManager notifications={data.notifications} onUpdate={onUpdate} />}
@@ -66,7 +67,8 @@ const GastosManager = ({
     setSelectedMonth,
     selectedYear,
     setSelectedYear,
-    isLoading
+    isLoading,
+    numApartamentos
 }) => {
     const meses = [
         "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -503,80 +505,109 @@ const GastosManager = ({
 
             {/* Tabla de Gastos Rediseñada con Cabeceras Fijas y Totales */}
             <div className="overflow-x-auto overflow-y-auto max-h-[600px] border border-ledger-border/40 rounded-2xl shadow-sm bg-white">
-                <table className="w-full text-left border-collapse relative">
-                    <thead className="sticky top-0 z-20 shadow-sm">
-                        <tr className="bg-slate-100 text-[9px] font-black uppercase tracking-widest text-slate-500 border-b border-ledger-border">
-                            <th className="p-4 border-r border-ledger-border/50 bg-slate-100">Concepto</th>
-                            <th className="p-4 text-center border-r border-ledger-border/50 bg-blue-50 text-blue-800">Estimado ($)</th>
-                            <th className="p-4 text-center border-r border-ledger-border/50 bg-emerald-50 text-emerald-800">Pagado (Bs)</th>
-                            <th className="p-4 text-center border-r border-ledger-border/50 bg-emerald-50 text-emerald-800">Equiv ($)</th>
-                            <th className="p-4 text-center border-r border-ledger-border/50 bg-slate-100">Diferencia</th>
-                            <th className="p-4 text-center border-r border-ledger-border/50 bg-slate-100">Info Pago</th>
-                            <th className="p-4 text-center bg-slate-100">Gestión</th>
-                        </tr>
-                    </thead>
-                    <tbody className="text-[10px]">
-                        {[...gastos].reverse().map((g, i) => {
-                            const { diferencia } = getCalculatedValues(g);
-                            const isSelected = selectedGasto?.id === g.id;
-                            const hasComprobante = g.comprobante_url;
-                            return (
-                                <tr key={i} onClick={() => setSelectedGasto(g)} className={`group cursor-pointer border-b border-ledger-border/30 transition-all ${isSelected ? 'bg-emerald-50' : 'hover:bg-slate-50/80'}`}>
-                                    <td className="p-4">
-                                        <div className="font-black text-ledger-ink uppercase tracking-tight">{g.concepto}</div>
-                                        <div className="text-[8px] text-slate-400 font-bold">{g.fecha}</div>
-                                    </td>
-                                    <td className="p-4 text-center font-mono font-bold text-blue-600 bg-blue-50/30">${formatNumber(g.usd)}</td>
-                                    <td className="p-4 text-center font-mono font-bold text-emerald-600 bg-emerald-50/30">{g.monto_pagado_bs > 0 ? formatNumber(g.monto_pagado_bs) : '---'}</td>
-                                    <td className="p-4 text-center font-mono font-black text-emerald-700 bg-emerald-50/30">{g.monto_pagado_usd > 0 ? `$${formatNumber(g.monto_pagado_usd)}` : '---'}</td>
-                                    <td className={`p-4 text-center font-mono font-bold ${diferencia > 0 ? 'text-amber-600' : 'text-slate-300'}`}>
-                                        {diferencia !== 0 ? `$${formatNumber(diferencia)}` : '0,00'}
-                                    </td>
-                                    <td className="p-4 text-center text-slate-400">
-                                        {g.fecha_pago ? (
-                                            <div className="flex flex-col items-center gap-1">
-                                                <span className="font-bold text-slate-500 uppercase text-[8px]">REF: {g.referencia || 'S/N'}</span>
-                                                <span className="text-[8px]">{g.fecha_pago}</span>
-                                            </div>
-                                        ) : '---'}
-                                    </td>
-                                    <td className="p-4 text-center">
-                                        <div className="flex items-center justify-center gap-1">
-                                            {hasComprobante && (
-                                                <a
-                                                    href={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${g.comprobante_url}`}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    onClick={(e) => e.stopPropagation()}
-                                                    className="text-emerald-500 hover:scale-110 transition-transform p-2"
-                                                    title="Ver Comprobante"
-                                                >
-                                                    <FileText size={16} />
-                                                </a>
-                                            )}
-                                            <button onClick={(e) => { e.stopPropagation(); handleDelete(g.id); }} className="text-slate-200 hover:text-red-500 p-2 rounded-lg transition-all"><Trash2 size={14} /></button>
-                                            <ChevronRight size={14} className={`text-slate-200 transition-transform ${isSelected ? 'rotate-90 text-emerald-500' : 'group-hover:translate-x-1'}`} />
-                                        </div>
-                                    </td>
+                {/* Filtrar gastos por el periodo seleccionado como medida de seguridad extra */}
+                {(() => {
+                    const mesAnioStr = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
+                    const filteredGastos = gastos.filter(g => g.mes_anio === mesAnioStr);
+
+                    return (
+                        <table className="w-full text-left border-collapse relative">
+                            <thead className="sticky top-0 z-20 shadow-sm">
+                                <tr className="bg-slate-100 text-[9px] font-black uppercase tracking-widest text-slate-500 border-b border-ledger-border">
+                                    <th className="p-4 border-r border-ledger-border/50 bg-slate-100">Concepto</th>
+                                    <th className="p-4 text-center border-r border-ledger-border/50 bg-blue-50 text-blue-800">Estimado ($)</th>
+                                    <th className="p-4 text-center border-r border-ledger-border/50 bg-emerald-50 text-emerald-800">Pagado (Bs)</th>
+                                    <th className="p-4 text-center border-r border-ledger-border/50 bg-emerald-50 text-emerald-800">Equiv ($)</th>
+                                    <th className="p-4 text-center border-r border-ledger-border/50 bg-slate-100">Diferencia</th>
+                                    <th className="p-4 text-center border-r border-ledger-border/50 bg-slate-100">Info Pago</th>
+                                    <th className="p-4 text-center bg-slate-100">Gestión</th>
                                 </tr>
-                            );
-                        })}
-                        {gastos.length === 0 ? (
-                            <tr><td colSpan="7" className="p-12 text-center text-slate-300 font-black uppercase tracking-widest text-[10px]">Sin registros en este periodo.</td></tr>
-                        ) : (
-                            <tr className="bg-ledger-audit border-t-2 border-ledger-border">
-                                <td className="p-4 font-black text-ledger-ink uppercase tracking-widest text-[10px]">TOTAL ACUMULADO</td>
-                                <td className="p-4 text-center font-mono font-black text-ledger-ink border-l border-ledger-border/50 text-base bg-blue-50/50">${formatNumber(gastos.reduce((acc, g) => acc + (parseFloat(g.usd) || 0), 0))}</td>
-                                <td className="p-4 text-center font-mono font-black text-emerald-600 border-l border-ledger-border/50 text-base">{formatNumber(gastos.reduce((acc, g) => acc + (parseFloat(g.monto_pagado_bs) || 0), 0))} Bs</td>
-                                <td className="p-4 text-center font-mono font-black text-emerald-700 border-l border-ledger-border/50 text-base bg-emerald-50/50">${formatNumber(gastos.reduce((acc, g) => acc + (parseFloat(g.monto_pagado_usd) || 0), 0))}</td>
-                                <td className="p-4 text-center font-mono font-black text-amber-600 border-l border-ledger-border/50 text-base bg-amber-50/20">${formatNumber(gastos.reduce((acc, g) => acc + ((parseFloat(g.usd) || 0) - (parseFloat(g.monto_pagado_usd) || 0)), 0))}</td>
-                                <td colSpan="2" className="p-4 text-center text-[9px] text-slate-500 font-black bg-slate-100/50 border-l border-ledger-border/50 uppercase tracking-tighter">
-                                    PROMEDIO TASA: {gastos.length > 0 ? formatNumber(gastos.reduce((acc, g) => acc + (parseFloat(g.tasa_pago || g.tasa_bcv) || 0), 0) / gastos.length) : '0,00'}
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
+                            </thead>
+                            <tbody className="text-[10px]">
+                                {[...filteredGastos].reverse().map((g, i) => {
+                                    const { diferencia } = getCalculatedValues(g);
+                                    const isSelected = selectedGasto?.id === g.id;
+                                    const hasComprobante = g.comprobante_url;
+                                    return (
+                                        <tr key={i} onClick={() => setSelectedGasto(g)} className={`group cursor-pointer border-b border-ledger-border/30 transition-all ${isSelected ? 'bg-emerald-50' : 'hover:bg-slate-50/80'}`}>
+                                            <td className="p-4">
+                                                <div className="font-black text-ledger-ink uppercase tracking-tight">{g.concepto}</div>
+                                                <div className="text-[8px] text-slate-400 font-bold">{g.fecha}</div>
+                                            </td>
+                                            <td className="p-4 text-center font-mono font-bold text-blue-600 bg-blue-50/30">${formatNumber(g.usd)}</td>
+                                            <td className="p-4 text-center font-mono font-bold text-emerald-600 bg-emerald-50/30">{g.monto_pagado_bs > 0 ? formatNumber(g.monto_pagado_bs) : '---'}</td>
+                                            <td className="p-4 text-center font-mono font-black text-emerald-700 bg-emerald-50/30">{g.monto_pagado_usd > 0 ? `$${formatNumber(g.monto_pagado_usd)}` : '---'}</td>
+                                            <td className={`p-4 text-center font-mono font-bold ${diferencia > 0 ? 'text-amber-600' : 'text-slate-300'}`}>
+                                                {diferencia !== 0 ? `$${formatNumber(diferencia)}` : '0,00'}
+                                            </td>
+                                            <td className="p-4 text-center text-slate-400">
+                                                {g.fecha_pago ? (
+                                                    <div className="flex flex-col items-center gap-1">
+                                                        <div className="flex items-center gap-1">
+                                                            <span className="font-bold text-slate-500 uppercase text-[8px]">REF: {g.referencia || 'S/N'}</span>
+                                                            {g.status_banco === 'VERIFICADO' && <CheckCircle2 size={10} className="text-emerald-500" title="Verificado en Banco" />}
+                                                        </div>
+                                                        <span className="text-[8px]">{g.fecha_pago}</span>
+                                                    </div>
+                                                ) : '---'}
+                                            </td>
+                                            <td className="p-4 text-center">
+                                                <div className="flex items-center justify-center gap-1">
+                                                    {hasComprobante && (
+                                                        <a
+                                                            href={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${g.comprobante_url}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            className="text-emerald-500 hover:scale-110 transition-transform p-2"
+                                                            title="Ver Comprobante"
+                                                        >
+                                                            <FileText size={16} />
+                                                        </a>
+                                                    )}
+                                                    <button onClick={(e) => { e.stopPropagation(); handleDelete(g.id); }} className="text-slate-200 hover:text-red-500 p-2 rounded-lg transition-all"><Trash2 size={14} /></button>
+                                                    <ChevronRight size={14} className={`text-slate-200 transition-transform ${isSelected ? 'rotate-90 text-emerald-500' : 'group-hover:translate-x-1'}`} />
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                                {filteredGastos.length === 0 ? (
+                                    <tr><td colSpan="7" className="p-12 text-center text-slate-300 font-black uppercase tracking-widest text-[10px]">Sin registros en este periodo.</td></tr>
+                                ) : (
+                                    <>
+                                        <tr className="bg-ledger-audit border-t-2 border-ledger-border">
+                                            <td className="p-4 font-black text-ledger-ink uppercase tracking-widest text-[10px]">TOTAL ACUMULADO</td>
+                                            <td className="p-4 text-center font-mono font-black text-ledger-ink border-l border-ledger-border/50 text-base bg-blue-50/50">${formatNumber(filteredGastos.reduce((acc, g) => acc + (parseFloat(g.usd) || 0), 0))}</td>
+                                            <td className="p-4 text-center font-mono font-black text-emerald-600 border-l border-ledger-border/50 text-base">{formatNumber(filteredGastos.reduce((acc, g) => acc + (parseFloat(g.monto_pagado_bs) || 0), 0))} Bs</td>
+                                            <td className="p-4 text-center font-mono font-black text-emerald-700 border-l border-ledger-border/50 text-base bg-emerald-50/50">${formatNumber(filteredGastos.reduce((acc, g) => acc + (parseFloat(g.monto_pagado_usd) || 0), 0))}</td>
+                                            <td className="p-4 text-center font-mono font-black text-amber-600 border-l border-ledger-border/50 text-base bg-amber-50/20">${formatNumber(filteredGastos.reduce((acc, g) => acc + ((parseFloat(g.usd) || 0) - (parseFloat(g.monto_pagado_usd) || 0)), 0))}</td>
+                                            <td colSpan="2" className="p-4 text-center text-[9px] text-slate-500 font-black bg-slate-100/50 border-l border-ledger-border/50 uppercase tracking-tighter">
+                                                {(() => {
+                                                    const totalPaidBs = filteredGastos.reduce((acc, g) => acc + (parseFloat(g.monto_pagado_bs) || 0), 0);
+                                                    const totalPaidUsd = filteredGastos.reduce((acc, g) => acc + (parseFloat(g.monto_pagado_usd) || 0), 0);
+                                                    const weightedAvg = totalPaidUsd > 0 ? totalPaidBs / totalPaidUsd : 0;
+                                                    return `PROMEDIO TASA (PONDERADA): ${formatNumber(weightedAvg)}`;
+                                                })()}
+                                            </td>
+                                        </tr>
+                                        <tr className="bg-yellow-50 border-t border-ledger-border">
+                                            <td colSpan="4" className="p-4 font-black text-ledger-accent uppercase tracking-widest text-[11px] text-right">
+                                                ALÍCUOTA DEL MES (Total Estimado / {numApartamentos} Aptos)
+                                            </td>
+                                            <td className="p-4 text-center font-mono font-black text-ledger-accent border-l border-ledger-border/50 text-lg bg-yellow-100">
+                                                ${formatNumber((filteredGastos.reduce((acc, g) => acc + (parseFloat(g.usd) || 0), 0)) / numApartamentos)}
+                                            </td>
+                                            <td colSpan="2" className="p-4 text-center text-[8px] text-slate-400 font-black uppercase tracking-wider border-l border-ledger-border/50">
+                                                Valor por apartamento
+                                            </td>
+                                        </tr>
+                                    </>
+                                )}
+                            </tbody>
+                        </table>
+                    );
+                })()}
             </div>
 
             <datalist id="conceptos-fijos">
@@ -602,12 +633,14 @@ const GastosManager = ({
 
 const PagosManager = ({ notifications, onUpdate }) => {
     const [uploading, setUploading] = useState(false);
+    const [comisionesDetectadas, setComisionesDetectadas] = useState(null);
 
     const handleFileUpload = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
         setUploading(true);
+        setComisionesDetectadas(null);
         const token = sessionStorage.getItem('token');
         const formData = new FormData();
         formData.append('archivo', file);
@@ -621,6 +654,9 @@ const PagosManager = ({ notifications, onUpdate }) => {
             const res = await resp.json();
             if (resp.ok) {
                 alert(res.message);
+                if (res.totalComisiones > 0) {
+                    setComisionesDetectadas(res.totalComisiones);
+                }
                 onUpdate();
             } else {
                 alert(res.error || 'Error al subir archivo');
@@ -655,7 +691,7 @@ const PagosManager = ({ notifications, onUpdate }) => {
                 <div className="relative group">
                     <input
                         type="file"
-                        accept=".xlsx, .csv"
+                        accept=".xlsx, .csv, .pdf"
                         onChange={handleFileUpload}
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                         disabled={uploading}
@@ -666,6 +702,23 @@ const PagosManager = ({ notifications, onUpdate }) => {
                 </div>
             </div>
 
+            {comisionesDetectadas !== null && (
+                <div className="bg-amber-50 border border-amber-200 p-6 rounded-2xl flex items-center justify-between animate-in zoom-in duration-300">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 bg-amber-100 rounded-xl text-amber-600">
+                            <Banknote size={20} />
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black uppercase text-amber-500 tracking-widest mb-1">Gasto Administrativo Detectado</p>
+                            <h4 className="text-xl font-black text-amber-900 tracking-tighter">Total Comisiones Bancarias: Bs. {formatNumber(comisionesDetectadas)}</h4>
+                        </div>
+                    </div>
+                    <button onClick={() => setComisionesDetectadas(null)} className="text-amber-400 hover:text-amber-600 p-2">
+                        <ChevronRight className="rotate-90 md:rotate-0" />
+                    </button>
+                </div>
+            )}
+
             <div className="ledger-card overflow-hidden">
                 <table className="w-full text-left border-collapse">
                     <thead>
@@ -673,7 +726,8 @@ const PagosManager = ({ notifications, onUpdate }) => {
                             <th className="p-4 border-r border-ledger-border/50">Unidad</th>
                             <th className="p-4 border-r border-ledger-border/50">Fecha Operación</th>
                             <th className="p-4 border-r border-ledger-border/50">Ref. Transacción</th>
-                            <th className="p-4 text-right border-r border-ledger-border/50">Importe Notificado</th>
+                            <th className="p-4 text-right border-r border-ledger-border/50">Importe USD</th>
+                            <th className="p-4 text-right border-r border-ledger-border/50">Importe Bs</th>
                             <th className="p-4 text-center border-r border-ledger-border/50">Status Auditoría</th>
                             <th className="p-4 text-center border-r border-ledger-border/50">Validación OCR</th>
                             <th className="p-4 text-center">Gestión</th>
@@ -686,6 +740,7 @@ const PagosManager = ({ notifications, onUpdate }) => {
                                 <td className="p-4 text-slate-400 font-mono tracking-tighter border-r border-ledger-border/10">{n.fecha_pago}</td>
                                 <td className="p-4 font-mono font-bold text-slate-600 border-r border-ledger-border/10 tracking-widest">{n.referencia}</td>
                                 <td className="p-4 text-right font-mono font-black text-ledger-ink border-l border-ledger-border/10">${formatNumber(n.monto || 0)}</td>
+                                <td className="p-4 text-right font-mono font-black text-ledger-ink border-l border-ledger-border/10">Bs {formatNumber(n.monto_bs || 0)}</td>
                                 <td className="p-4 text-center border-l border-ledger-border/10">
                                     <span className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-tighter border ${n.status_banco === 'VERIFICADO' ? 'bg-emerald-50 text-emerald-600 border-emerald-100 shadow-sm' :
                                         n.status_banco === 'ERROR_MONTO' ? 'bg-red-50 text-red-600 border-red-100 shadow-sm' :

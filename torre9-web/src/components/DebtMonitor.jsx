@@ -15,7 +15,9 @@ import {
     PlusCircle,
     X,
     Upload,
-    Hash
+    Hash,
+    Loader2,
+    CheckCircle2
 } from 'lucide-react';
 import { sortApartamentos } from '../utils/sorting';
 
@@ -46,13 +48,32 @@ const DebtMonitor = ({ data, onUpdate }) => {
 
     const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
+    // Función para ajustar fecha si es fin de semana (Sábado -> Viernes, Domingo -> Viernes)
+    const getAdjustedDate = (dateString) => {
+        if (!dateString) return dateString;
+        const date = new Date(dateString + 'T12:00:00'); // Evitar problemas de timezone
+        const day = date.getDay(); // 0 = Domingo, 6 = Sábado
+
+        const adjusted = new Date(date);
+        if (day === 0) { // Domingo -> Retroceder 2 días
+            adjusted.setDate(date.getDate() - 2);
+        } else if (day === 6) { // Sábado -> Retroceder 1 día
+            adjusted.setDate(date.getDate() - 1);
+        } else {
+            return dateString;
+        }
+        return adjusted.toISOString().split('T')[0];
+    };
+
     // Buscar tasa al cambiar fecha (Igual que OwnerPanel)
     useEffect(() => {
         const fetchTasa = async () => {
             if (!formData.fecha_pago) return;
+            const fechaConsulta = getAdjustedDate(formData.fecha_pago);
             setLoadingTasa(true);
             try {
-                const resp = await fetch(`${API_URL}/tasas/${formData.fecha_pago}`);
+                console.log(`[DEBUG] DebtMonitor: Buscando tasa para ${fechaConsulta} (Original: ${formData.fecha_pago})`);
+                const resp = await fetch(`${API_URL}/tasas/${fechaConsulta}`);
                 if (resp.ok) {
                     const data = await resp.json();
                     setTasaBCV(data.valor);
@@ -169,26 +190,24 @@ const DebtMonitor = ({ data, onUpdate }) => {
     const notifications = data?.notifications || [];
 
     // Alícuota fija según requerimientos previos (Total / 16 aptos)
-    const alicuotaMensual = data?.resumen?.promedio_alicuota || 0;
+    const alicuotaMensual = parseFloat(data?.resumen?.promedio_alicuota) || 0;
 
     // Totales para el pie de página
     const totales = cobranzas.reduce((acc, c) => {
         const aptoPayments = notifications.filter(n => n.apto === c.apto);
         const totalBs = aptoPayments.reduce((sum, p) => sum + (p.monto_bs || (p.monto * (p.tasa_bcv || 36.5))), 0);
         const totalUsd = aptoPayments.reduce((sum, p) => sum + p.monto, 0);
-        const saldoInicial = c.deuda_acumulada || (c.saldo + c.pagado);
+        // AHORA: Saldo Inicial incluye la alicuota del mes corriente
+        const saldoInicial = (parseFloat(c.deuda) || 0) + alicuotaMensual;
         const saldoAl31 = saldoInicial - totalUsd;
-        const saldoFinal = saldoAl31 + alicuotaMensual;
 
         return {
             saldoInicial: acc.saldoInicial + saldoInicial,
             bs: acc.bs + totalBs,
             usd: acc.usd + totalUsd,
-            saldoAl31: acc.saldoAl31 + saldoAl31,
-            alicuota: acc.alicuota + alicuotaMensual,
-            saldoFinal: acc.saldoFinal + saldoFinal
+            saldoAl31: acc.saldoAl31 + saldoAl31
         };
-    }, { saldoInicial: 0, bs: 0, usd: 0, saldoAl31: 0, alicuota: 0, saldoFinal: 0 });
+    }, { saldoInicial: 0, bs: 0, usd: 0, saldoAl31: 0 });
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -409,8 +428,7 @@ const DebtMonitor = ({ data, onUpdate }) => {
                             {/* Encabezado Superior Estilo Excel */}
                             <tr className="bg-ledger-ink text-white/50 text-[9px] font-black uppercase tracking-[0.2em]">
                                 <th colSpan="2" className="p-2 text-center border-r border-white/10 bg-ledger-ink">Identificación</th>
-                                <th colSpan="4" className="p-2 text-center border-r border-white/10 bg-[#0c2461]">Cobranzas del Mes</th>
-                                <th colSpan="2" className="p-2 text-center bg-ledger-ink">Cuentas por Cobrar</th>
+                                <th colSpan="4" className="p-2 text-center bg-[#0c2461]">Detalle de Cobranza</th>
                             </tr>
                             <tr className="ledger-table-header uppercase text-[10px]">
                                 <th className="p-4 border-r border-ledger-border/50 w-48 bg-slate-100 italic">Propietario</th>
@@ -418,9 +436,7 @@ const DebtMonitor = ({ data, onUpdate }) => {
                                 <th className="p-4 text-right border-r border-ledger-border/50 bg-yellow-50 font-black">Saldo Inicial</th>
                                 <th className="p-4 text-right border-r border-ledger-border/50 bg-slate-100">Pago Bs</th>
                                 <th className="p-4 text-right border-r border-ledger-border/50 bg-slate-100">Pago $</th>
-                                <th className="p-4 text-right border-r border-ledger-border/50 bg-slate-100 font-black">Subtotal</th>
-                                <th className="p-4 text-right border-r border-ledger-border/50 text-blue-600 bg-blue-50">Alic. Próx</th>
-                                <th className="p-4 text-right bg-ledger-audit font-black text-ledger-ink">Saldo Final</th>
+                                <th className="p-4 text-right bg-slate-50/50 font-black text-slate-700">Subtotal</th>
                             </tr>
                         </thead>
                         <tbody className="text-[11px]">
@@ -428,9 +444,10 @@ const DebtMonitor = ({ data, onUpdate }) => {
                                 const aptoPayments = notifications.filter(n => n.apto === c.apto);
                                 const totalBs = aptoPayments.reduce((sum, p) => sum + (p.monto_bs || (p.monto * (p.tasa_bcv || 36.5))), 0);
                                 const totalUsd = aptoPayments.reduce((sum, p) => sum + p.monto, 0);
-                                const saldoInicial = c.deuda_acumulada || (c.saldo + c.pagado);
+
+                                // AHORA: Saldo Inicial incluye la alicuota del mes corriente
+                                const saldoInicial = (parseFloat(c.deuda) || 0) + alicuotaMensual;
                                 const saldoAl31 = saldoInicial - totalUsd;
-                                const saldoFinal = saldoAl31 + alicuotaMensual;
 
                                 return (
                                     <tr key={i} className="ledger-row group hover:bg-slate-50 transition-all border-b border-ledger-border/50">
@@ -439,10 +456,8 @@ const DebtMonitor = ({ data, onUpdate }) => {
                                         <td className="p-4 text-right font-mono text-slate-400 border-r border-ledger-border/10 bg-yellow-50/10">${formatNumber(saldoInicial)}</td>
                                         <td className="p-4 text-right font-mono text-slate-500 border-r border-ledger-border/10">{formatNumber(totalBs)}</td>
                                         <td className="p-4 text-right font-mono text-emerald-600 border-r border-ledger-border/10 font-bold">{formatNumber(totalUsd)}</td>
-                                        <td className="p-4 text-right font-mono font-black text-slate-600 border-r border-ledger-border/10 bg-slate-50/50">${formatNumber(saldoAl31)}</td>
-                                        <td className="p-4 text-right font-mono font-bold text-blue-600 border-r border-ledger-border/10 bg-blue-50/10">${formatNumber(alicuotaMensual)}</td>
-                                        <td className={`p-4 text-right font-mono font-black bg-ledger-audit ${saldoFinal > 0 ? 'text-red-600' : 'text-emerald-500'}`}>
-                                            ${formatNumber(saldoFinal)}
+                                        <td className={`p-4 text-right font-mono font-black ${saldoAl31 > 0 ? 'text-red-600' : 'text-emerald-500'} bg-slate-50/50`}>
+                                            ${formatNumber(saldoAl31)}
                                         </td>
                                     </tr>
                                 );
@@ -451,13 +466,11 @@ const DebtMonitor = ({ data, onUpdate }) => {
                         {/* Pie de Página con Totales (POR COBRAR) */}
                         <tfoot>
                             <tr className="bg-ledger-audit font-black text-ledger-ink text-[11px]">
-                                <td colSpan="2" className="p-5 uppercase tracking-[0.2em] border-r border-ledger-border text-ledger-accent">Totales (Por Cobrar)</td>
+                                <td colSpan="2" className="p-5 uppercase tracking-[0.2em] border-r border-ledger-border text-ledger-accent">Totales Globales</td>
                                 <td className="p-5 text-right font-mono border-r border-ledger-border">${formatNumber(totales.saldoInicial)}</td>
                                 <td className="p-5 text-right font-mono border-r border-ledger-border uppercase">{formatNumber(totales.bs)} Bs</td>
                                 <td className="p-5 text-right font-mono border-r border-ledger-border">${formatNumber(totales.usd)}</td>
-                                <td className="p-5 text-right font-mono border-r border-ledger-border bg-slate-100">${formatNumber(totales.saldoAl31)}</td>
-                                <td className="p-5 text-right font-mono border-r border-ledger-border text-blue-600 bg-blue-100/20">${formatNumber(totales.alicuota)}</td>
-                                <td className="p-5 text-right font-mono bg-ledger-ink text-white">${formatNumber(totales.saldoFinal)}</td>
+                                <td className="p-5 text-right font-mono bg-ledger-ink text-white">${formatNumber(totales.saldoAl31)}</td>
                             </tr>
                         </tfoot>
                     </table>
@@ -468,7 +481,7 @@ const DebtMonitor = ({ data, onUpdate }) => {
                 <span>Sistema de Gestión Torre 9 v2.5</span>
                 <span className="flex items-center gap-2"><div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div> Base de Datos Sincronizada</span>
             </div>
-        </div>
+        </div >
     );
 };
 
