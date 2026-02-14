@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Control de Morosos - Administración de Condominios</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#2ecc70",
+                        "background-light": "#f6f8f7",
+                        "background-dark": "#131f18",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark min-h-screen text-[#1a2e23]">
+<div class="max-w-md mx-auto bg-white dark:bg-background-dark min-h-screen flex flex-col shadow-xl">
+<!-- Header -->
+<header class="sticky top-0 z-10 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-primary/10">
+<div class="flex items-center justify-between p-4">
+<button class="p-2 hover:bg-primary/10 rounded-full transition-colors">
+<span class="material-symbols-outlined text-[#1a2e23] dark:text-white">arrow_back</span>
+</button>
+<h1 class="text-lg font-bold text-[#1a2e23] dark:text-white">Control de Morosos</h1>
+<button class="p-2 hover:bg-primary/10 rounded-full transition-colors">
+<span class="material-symbols-outlined text-[#1a2e23] dark:text-white">more_vert</span>
+</button>
+</div>
+</header>
+<main class="flex-1 overflow-y-auto pb-24">
+<!-- Summary Cards -->
+<div class="p-4 grid grid-cols-2 gap-4">
+<div class="bg-primary/10 border-t-4 border-primary p-4 rounded-lg shadow-sm">
+<p class="text-xs font-medium text-[#1a2e23]/70 uppercase tracking-wider">Deuda Total</p>
+<p class="text-xl font-bold text-[#1a2e23] mt-1">$45,280.00</p>
+<div class="flex items-center mt-2 text-red-500">
+<span class="material-symbols-outlined text-sm">trending_up</span>
+<span class="text-xs font-semibold ml-1">+5.2%</span>
+</div>
+</div>
+<div class="bg-primary/10 border-t-4 border-primary p-4 rounded-lg shadow-sm">
+<p class="text-xs font-medium text-[#1a2e23]/70 uppercase tracking-wider">Unidades</p>
+<p class="text-xl font-bold text-[#1a2e23] mt-1">12</p>
+<div class="flex items-center mt-2 text-primary">
+<span class="material-symbols-outlined text-sm">group</span>
+<span class="text-xs font-semibold ml-1">En mora</span>
+</div>
+</div>
+</div>
+<!-- Search and Filter -->
+<div class="px-4 py-2">
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-3 text-gray-400">search</span>
+<input class="w-full pl-10 pr-4 py-2 bg-background-light border-none rounded-lg text-sm focus:ring-2 focus:ring-primary/50" placeholder="Buscar unidad o propietario..." type="text"/>
+</div>
+<div class="flex gap-2 mt-3 overflow-x-auto pb-2 no-scrollbar">
+<button class="whitespace-nowrap px-4 py-1.5 bg-primary text-white rounded-full text-xs font-medium">Todos</button>
+<button class="whitespace-nowrap px-4 py-1.5 bg-primary/10 text-primary rounded-full text-xs font-medium">+3 meses</button>
+<button class="whitespace-nowrap px-4 py-1.5 bg-primary/10 text-primary rounded-full text-xs font-medium">Críticos</button>
+<button class="whitespace-nowrap px-4 py-1.5 bg-primary/10 text-primary rounded-full text-xs font-medium">Recientes</button>
+</div>
+</div>
+<!-- List of Debtors -->
+<div class="px-4 mt-2 space-y-3">
+<h2 class="text-sm font-bold text-[#1a2e23]/60 uppercase tracking-widest px-1">Listado de Unidades</h2>
+<!-- Unit Card 1 -->
+<div class="bg-white border border-gray-100 rounded-xl p-4 shadow-sm hover:border-primary/30 transition-all">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="font-bold text-[#1a2e23]">Juan Pérez</h3>
+<p class="text-xs text-gray-500 font-medium">Torre A - Unidad 204</p>
+</div>
+<div class="text-right">
+<p class="font-bold text-red-600">$1,250.00</p>
+<span class="inline-block px-2 py-0.5 bg-red-100 text-red-700 text-[10px] font-bold rounded uppercase mt-1">2 meses</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-2 mt-4">
+<button class="flex items-center justify-center gap-2 py-2 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary/90 transition-colors">
+<span class="material-symbols-outlined text-sm">send</span>
+                            Recordatorio
+                        </button>
+<button class="flex items-center justify-center gap-2 py-2 bg-primary/10 text-primary rounded-lg text-xs font-bold hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined text-sm">description</span>
+                            Edo. Cuenta
+                        </button>
+</div>
+</div>
+<!-- Unit Card 2 -->
+<div class="bg-white border border-gray-100 rounded-xl p-4 shadow-sm hover:border-primary/30 transition-all">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="font-bold text-[#1a2e23]">María García</h3>
+<p class="text-xs text-gray-500 font-medium">Torre B - Unidad 501</p>
+</div>
+<div class="text-right">
+<p class="font-bold text-red-600">$4,800.00</p>
+<span class="inline-block px-2 py-0.5 bg-red-600 text-white text-[10px] font-bold rounded uppercase mt-1">5 meses</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-2 mt-4">
+<button class="flex items-center justify-center gap-2 py-2 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary/90 transition-colors">
+<span class="material-symbols-outlined text-sm">send</span>
+                            Recordatorio
+                        </button>
+<button class="flex items-center justify-center gap-2 py-2 bg-primary/10 text-primary rounded-lg text-xs font-bold hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined text-sm">description</span>
+                            Edo. Cuenta
+                        </button>
+</div>
+</div>
+<!-- Unit Card 3 -->
+<div class="bg-white border border-gray-100 rounded-xl p-4 shadow-sm hover:border-primary/30 transition-all">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="font-bold text-[#1a2e23]">Carlos Ruiz</h3>
+<p class="text-xs text-gray-500 font-medium">Torre A - Unidad 102</p>
+</div>
+<div class="text-right">
+<p class="font-bold text-red-600">$650.00</p>
+<span class="inline-block px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-bold rounded uppercase mt-1">1 mes</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-2 mt-4">
+<button class="flex items-center justify-center gap-2 py-2 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary/90 transition-colors">
+<span class="material-symbols-outlined text-sm">send</span>
+                            Recordatorio
+                        </button>
+<button class="flex items-center justify-center gap-2 py-2 bg-primary/10 text-primary rounded-lg text-xs font-bold hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined text-sm">description</span>
+                            Edo. Cuenta
+                        </button>
+</div>
+</div>
+<!-- Unit Card 4 -->
+<div class="bg-white border border-gray-100 rounded-xl p-4 shadow-sm hover:border-primary/30 transition-all opacity-80">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="font-bold text-[#1a2e23]">Elena Torres</h3>
+<p class="text-xs text-gray-500 font-medium">Torre C - Unidad 304</p>
+</div>
+<div class="text-right">
+<p class="font-bold text-red-600">$2,100.00</p>
+<span class="inline-block px-2 py-0.5 bg-red-100 text-red-700 text-[10px] font-bold rounded uppercase mt-1">3 meses</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-2 mt-4">
+<button class="flex items-center justify-center gap-2 py-2 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary/90 transition-colors">
+<span class="material-symbols-outlined text-sm">send</span>
+                            Recordatorio
+                        </button>
+<button class="flex items-center justify-center gap-2 py-2 bg-primary/10 text-primary rounded-lg text-xs font-bold hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined text-sm">description</span>
+                            Edo. Cuenta
+                        </button>
+</div>
+</div>
+</div>
+</main>
+<!-- Floating Export Button -->
+<button class="fixed bottom-24 right-6 bg-primary text-white size-14 rounded-full shadow-lg flex items-center justify-center hover:scale-105 transition-transform">
+<span class="material-symbols-outlined">ios_share</span>
+</button>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto border-t border-gray-100 bg-white dark:bg-background-dark px-4 pb-4 pt-2 flex justify-between items-center">
+<a class="flex flex-col items-center gap-1 text-gray-400" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[10px] font-medium">Inicio</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">warning</span>
+<span class="text-[10px] font-bold">Morosos</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-gray-400" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span class="text-[10px] font-medium">Pagos</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-gray-400" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-[10px] font-medium">Ajustes</span>
+</a>
+</nav>
+</div>
+</body></html>

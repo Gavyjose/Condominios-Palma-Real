@@ -374,9 +374,8 @@ app.get('/api/resumen', (req, res) => {
 
     const query = `
         SELECT 
-            (SELECT SUM(monto_usd) FROM reserva) as fondoReserva,
-            (SELECT SUM(alicuota_usd) - SUM(monto_pagado_usd) FROM cobranzas) as cuentasPorCobrar,
-            (SELECT SUM(monto_bs) FROM reserva WHERE tipo = 'ENTRADA') as efectivoCajaBs
+            (SELECT COALESCE(SUM(CASE WHEN tipo = 'ENTRADA' THEN monto_usd ELSE -monto_usd END), 0) FROM reserva) as fondoReserva,
+            (SELECT COALESCE(SUM(monto_bs), 0) FROM reserva WHERE tipo = 'ENTRADA') as efectivoCajaBs
     `;
 
     db.get(query, (err, row) => {
@@ -426,12 +425,23 @@ app.get('/api/resumen', (req, res) => {
 
                             console.log(`[DEBUG SERVER] /api/resumen - Total Gastos: ${totalGastos}, Aptos: ${numAptos}, Alicuota: ${promedioAlicuota}`);
 
-                            res.json({
-                                fondoReserva: row.fondoReserva || 0,
-                                cuentasPorCobrar: row.cuentasPorCobrar || 0,
-                                efectivoCajaBs: row.efectivoCajaBs || 0,
-                                totalCirculanteUSD: (row.fondoReserva || 0) + (row.cuentasPorCobrar || 0),
-                                promedio_alicuota: promedioAlicuota
+                            // --- CÁLCULO DE CUENTAS POR COBRAR DINÁMICO ---
+                            // Cuentas Por Cobrar = Suma de todos los gastos del condominio - Suma de pagos verificados
+                            db.get(`
+                                SELECT 
+                                    (SELECT COALESCE(SUM(monto_usd), 0) FROM gastos WHERE condominio_id = ?) as total_gastos_historicos,
+                                    (SELECT COALESCE(SUM(monto), 0) FROM notificaciones_pago WHERE status_banco = 'VERIFICADO' AND condominio_id = ?) as total_pagos_recibidos,
+                                    (SELECT COALESCE(SUM(alicuota_usd - monto_pagado_usd), 0) FROM cobranzas WHERE condominio_id = ?) as saldo_tabla_estatica
+                            `, [condoId, condoId, condoId], (err, calcRow) => {
+                                const deudaDinamica = (calcRow.total_gastos_historicos - calcRow.total_pagos_recibidos) + calcRow.saldo_tabla_estatica;
+
+                                res.json({
+                                    fondoReserva: row.fondoReserva || 0,
+                                    cuentasPorCobrar: deudaDinamica || 0,
+                                    efectivoCajaBs: row.efectivoCajaBs || 0,
+                                    totalCirculanteUSD: (row.fondoReserva || 0) + (deudaDinamica || 0),
+                                    promedio_alicuota: promedioAlicuota
+                                });
                             });
                         }
                     );
@@ -554,15 +564,35 @@ app.delete('/api/gastos/:id', authenticateToken, (req, res) => {
 });
 
 app.get('/api/cobranzas', (req, res) => {
-    db.all(`
-        SELECT a.codigo as apto, a.propietario, 
-        COALESCE(SUM(c.alicuota_usd - c.monto_pagado_usd), 0) as deuda
-        FROM apartamentos a
-        LEFT JOIN cobranzas c ON a.id = c.apartamento_id
-        GROUP BY a.id
-    `, (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(rows.map(r => ({ ...r, solvente: r.deuda <= 0 })));
+    // 1. Obtener condominio activo
+    db.get("SELECT id FROM condominios WHERE activo = 1", (err, condo) => {
+        if (err || !condo) return res.status(500).json({ error: "No hay condominio activo" });
+
+        // 2. Obtener total de gastos históricos y número de apartamentos para calcular la alicuota por apto
+        db.get(`
+            SELECT 
+                (SELECT COALESCE(SUM(monto_usd), 0) FROM gastos WHERE condominio_id = ?) as total_gastos,
+                (SELECT COUNT(*) FROM apartamentos WHERE condominio_id = ?) as num_aptos
+        `, [condo.id, condo.id], (err, info) => {
+            const alicuotaAcumulada = info.num_aptos > 0 ? info.total_gastos / info.num_aptos : 0;
+
+            // 3. Obtener deuda real por apartamento cruzando:
+            // Alicuota Acumulada - Pagos Verificados + Saldo en tabla fija (si existe)
+            db.all(`
+                SELECT 
+                    a.codigo as apto, 
+                    a.propietario,
+                    ? - COALESCE((SELECT SUM(monto) FROM notificaciones_pago WHERE apartamento_codigo = a.codigo AND status_banco = 'VERIFICADO'), 0)
+                    + COALESCE((SELECT SUM(alicuota_usd - monto_pagado_usd) FROM cobranzas WHERE apartamento_id = a.id), 0) as deuda
+                FROM apartamentos a
+                WHERE a.condominio_id = ?
+                GROUP BY a.id
+            `, [alicuotaAcumulada, condo.id], (err, rows) => {
+                if (err) return res.status(500).json({ error: err.message });
+                // Solvente si la deuda es despreciable (menor a 10 centavos para evitar temas de redondeo)
+                res.json(rows.map(r => ({ ...r, solvente: r.deuda <= 0.1 })));
+            });
+        });
     });
 });
 

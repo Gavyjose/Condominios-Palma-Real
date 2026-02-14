@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Herramienta de Conciliación - PropAdmin</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#2ecc70",
+                        "background-light": "#f6f8f7",
+                        "background-dark": "#131f18",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .active-fill {
+            font-variation-settings: 'FILL' 1;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+<!-- Header Section -->
+<header class="sticky top-0 z-10 bg-white dark:bg-background-dark border-b border-primary/10 px-4 py-3">
+<div class="flex items-center justify-between mb-4">
+<div class="flex items-center gap-3">
+<button class="p-2 hover:bg-primary/10 rounded-full transition-colors">
+<span class="material-symbols-outlined text-slate-600 dark:text-slate-300">arrow_back</span>
+</button>
+<h1 class="text-lg font-bold tracking-tight">Conciliación Bancaria</h1>
+</div>
+<button class="p-2 hover:bg-primary/10 rounded-full transition-colors">
+<span class="material-symbols-outlined text-slate-600 dark:text-slate-300">filter_list</span>
+</button>
+</div>
+<!-- Progress Section -->
+<div class="space-y-2">
+<div class="flex justify-between items-end">
+<span class="text-sm font-semibold text-primary">65% Conciliado</span>
+<span class="text-xs text-slate-500 dark:text-slate-400 font-medium">12 movimientos pendientes</span>
+</div>
+<div class="w-full bg-primary/10 h-2.5 rounded-full overflow-hidden">
+<div class="bg-primary h-full rounded-full transition-all duration-500" style="width: 65%"></div>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-1 overflow-y-auto p-4 space-y-6">
+<!-- Search/Filter Bar -->
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
+<input class="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all" placeholder="Buscar por monto o descripción..." type="text"/>
+</div>
+<div class="flex items-center justify-between">
+<h2 class="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Sugerencia de IA</h2>
+<span class="px-2 py-1 bg-primary/10 text-primary text-[10px] font-bold rounded-full uppercase">Alta Confianza</span>
+</div>
+<!-- Reconciliation Pairing Container -->
+<div class="space-y-4">
+<!-- Pair Card 1 -->
+<div class="group relative flex flex-col gap-2">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-px bg-slate-200 dark:bg-slate-700 rounded-xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-700">
+<!-- Left: Bank Side -->
+<div class="bg-white dark:bg-slate-900 p-4">
+<div class="flex items-center gap-2 mb-3">
+<span class="material-symbols-outlined text-slate-400 text-lg">account_balance</span>
+<span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Movimiento Bancario</span>
+</div>
+<div class="space-y-1">
+<p class="text-xs text-slate-500">15 Oct, 2023</p>
+<p class="text-sm font-semibold text-slate-800 dark:text-slate-200">Transferencia Recibida - BANCOLOMBIA</p>
+<p class="text-xl font-bold text-slate-900 dark:text-white tabular-nums">$1.250.000</p>
+</div>
+</div>
+<!-- Right: System Side (Highlighted as suggestion) -->
+<div class="bg-primary/5 dark:bg-primary/10 p-4 border-t md:border-t-0 md:border-l border-primary/20">
+<div class="flex items-center gap-2 mb-3">
+<span class="material-symbols-outlined text-primary text-lg">auto_awesome</span>
+<span class="text-[10px] font-bold text-primary uppercase tracking-widest">Registro Sugerido</span>
+</div>
+<div class="space-y-1">
+<div class="flex justify-between items-start">
+<p class="text-sm font-bold text-slate-800 dark:text-slate-200">Apto 402 - Torre A</p>
+<span class="text-[10px] px-1.5 py-0.5 bg-white dark:bg-slate-800 rounded border border-primary/20 text-primary font-medium">Ref: #8821</span>
+</div>
+<p class="text-xs text-slate-600 dark:text-slate-400">Propietario: Carlos Estévez</p>
+<p class="text-sm font-medium text-slate-500 italic">Pago Administración Octubre</p>
+</div>
+</div>
+</div>
+<!-- Action Button Overlay/Connector -->
+<div class="flex justify-center -mt-6 z-20">
+<button class="bg-primary text-white px-6 py-2.5 rounded-full font-bold text-sm shadow-lg hover:bg-primary/90 transition-all flex items-center gap-2 active:scale-95">
+<span class="material-symbols-outlined text-sm">auto_fix_high</span>
+                        Conciliar
+                    </button>
+</div>
+<div class="flex justify-between px-2 pt-2">
+<button class="text-xs font-semibold text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">close</span> Ignorar
+                    </button>
+<button class="text-xs font-semibold text-primary hover:underline flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">search</span> Buscar manualmente
+                    </button>
+</div>
+</div>
+<!-- Pair Card 2 (Secondary Suggestion) -->
+<div class="group relative flex flex-col gap-2 pt-4">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-px bg-slate-200 dark:bg-slate-700 rounded-xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-700 opacity-80">
+<!-- Left: Bank Side -->
+<div class="bg-white dark:bg-slate-900 p-4">
+<div class="flex items-center gap-2 mb-3">
+<span class="material-symbols-outlined text-slate-400 text-lg">account_balance</span>
+<span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Movimiento Bancario</span>
+</div>
+<div class="space-y-1">
+<p class="text-xs text-slate-500">14 Oct, 2023</p>
+<p class="text-sm font-semibold text-slate-800 dark:text-slate-200">Depósito en Efectivo - Corresponsal</p>
+<p class="text-xl font-bold text-slate-900 dark:text-white tabular-nums">$450.000</p>
+</div>
+</div>
+<!-- Right: System Side -->
+<div class="bg-primary/5 dark:bg-primary/10 p-4 border-t md:border-t-0 md:border-l border-primary/20">
+<div class="flex items-center gap-2 mb-3">
+<span class="material-symbols-outlined text-primary text-lg">auto_awesome</span>
+<span class="text-[10px] font-bold text-primary uppercase tracking-widest">Registro Sugerido</span>
+</div>
+<div class="space-y-1">
+<div class="flex justify-between items-start">
+<p class="text-sm font-bold text-slate-800 dark:text-slate-200">Casa 12 - Etapa 1</p>
+<span class="text-[10px] px-1.5 py-0.5 bg-white dark:bg-slate-800 rounded border border-primary/20 text-primary font-medium">Ref: #8819</span>
+</div>
+<p class="text-xs text-slate-600 dark:text-slate-400">Propietaria: Martha Lucía Páez</p>
+<p class="text-sm font-medium text-slate-500 italic">Reserva Salón Comunal</p>
+</div>
+</div>
+</div>
+<!-- Action Button -->
+<div class="flex justify-center -mt-6 z-20">
+<button class="bg-primary text-white px-6 py-2.5 rounded-full font-bold text-sm shadow-lg hover:bg-primary/90 transition-all flex items-center gap-2 active:scale-95">
+<span class="material-symbols-outlined text-sm">auto_fix_high</span>
+                        Conciliar
+                    </button>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="bg-white dark:bg-background-dark border-t border-slate-100 dark:border-slate-800 px-4 pb-6 pt-2">
+<div class="flex justify-around items-center max-w-lg mx-auto">
+<a class="flex flex-col items-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined text-2xl">home</span>
+<span class="text-[10px] font-medium">Inicio</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined text-2xl active-fill">sync_alt</span>
+<span class="text-[10px] font-bold">Conciliar</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined text-2xl">bar_chart</span>
+<span class="text-[10px] font-medium">Reportes</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined text-2xl">apartment</span>
+<span class="text-[10px] font-medium">Unidades</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined text-2xl">settings</span>
+<span class="text-[10px] font-medium">Ajustes</span>
+</a>
+</div>
+</nav>
+<!-- Decorative Illustration for context (Hidden on very small screens) -->
+<div class="fixed bottom-24 right-4 hidden md:block">
+<div class="bg-white dark:bg-slate-800 p-3 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 max-w-[200px]">
+<div class="w-full h-24 bg-primary/5 rounded mb-2 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-4xl">finance_chip</span>
+</div>
+<p class="text-[10px] text-slate-500 leading-tight">El motor de IA está aprendiendo de tus patrones de conciliación.</p>
+</div>
+</div>
+</body></html>

@@ -113,7 +113,7 @@ const App = () => {
 
   // Cálculos derivados
   const totalAptos = data.cobranzas?.length || 0;
-  const aptosSolventes = data.cobranzas?.filter(c => c.deuda_total_usd <= 0.1).length || 0;
+  const aptosSolventes = data.cobranzas?.filter(c => c.deuda <= 0.1).length || 0;
   const porcentajeSolvencia = totalAptos > 0 ? ((aptosSolventes / totalAptos) * 100).toFixed(1) : 0;
 
   // Filtrado para componentes que requieren solo Pendientes

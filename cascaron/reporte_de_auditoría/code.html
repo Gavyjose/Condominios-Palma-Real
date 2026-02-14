@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Reporte de Auditoría - Condo Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#2ecc70",
+                        "background-light": "#f6f8f7",
+                        "background-dark": "#131f18",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-display min-h-screen">
+<!-- Main Container -->
+<div class="max-w-md mx-auto bg-white dark:bg-background-dark min-h-screen flex flex-col shadow-xl">
+<!-- Top Header -->
+<header class="flex items-center bg-white dark:bg-background-dark p-4 sticky top-0 z-10 border-b border-primary/10">
+<div class="text-slate-700 dark:text-slate-300 flex size-10 shrink-0 items-center justify-center cursor-pointer">
+<span class="material-symbols-outlined">arrow_back</span>
+</div>
+<h1 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-tight flex-1 text-center">Reporte de Auditoría</h1>
+<div class="flex w-10 items-center justify-end">
+<button class="flex items-center justify-center rounded-lg h-10 w-10 bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined text-[22px]">picture_as_pdf</span>
+</button>
+</div>
+</header>
+<!-- Content Area -->
+<main class="flex-1 overflow-y-auto pb-20">
+<!-- Period Filter -->
+<div class="bg-white dark:bg-background-dark border-b border-slate-100 dark:border-slate-800">
+<div class="flex overflow-x-auto no-scrollbar px-4 gap-6">
+<button class="flex flex-col items-center justify-center border-b-2 border-transparent text-slate-400 pb-3 pt-4 whitespace-nowrap text-sm font-medium">
+                        Agosto 2023
+                    </button>
+<button class="flex flex-col items-center justify-center border-b-2 border-primary text-primary pb-3 pt-4 whitespace-nowrap text-sm font-bold">
+                        Septiembre 2023
+                    </button>
+<button class="flex flex-col items-center justify-center border-b-2 border-transparent text-slate-400 pb-3 pt-4 whitespace-nowrap text-sm font-medium">
+                        Octubre 2023
+                    </button>
+<button class="flex flex-col items-center justify-center border-b-2 border-transparent text-slate-400 pb-3 pt-4 whitespace-nowrap text-sm font-medium">
+                        Noviembre 2023
+                    </button>
+</div>
+</div>
+<!-- Health Indicator Card -->
+<section class="p-4">
+<div class="bg-primary/5 dark:bg-primary/10 rounded-xl p-5 border border-primary/20">
+<div class="flex items-center justify-between mb-4">
+<div>
+<h3 class="text-slate-900 dark:text-white text-base font-bold">Salud de Conciliación</h3>
+<p class="text-slate-500 dark:text-slate-400 text-xs">Estado financiero actual del periodo</p>
+</div>
+<div class="relative size-16 flex items-center justify-center">
+<svg class="size-full -rotate-90" viewbox="0 0 36 36">
+<circle class="stroke-primary/20" cx="18" cy="18" fill="none" r="16" stroke-width="3"></circle>
+<circle class="stroke-primary" cx="18" cy="18" fill="none" r="16" stroke-dasharray="100" stroke-dashoffset="6" stroke-linecap="round" stroke-width="3"></circle>
+</svg>
+<span class="absolute text-primary font-bold text-sm">94%</span>
+</div>
+</div>
+<div class="flex items-center gap-2 text-primary">
+<span class="material-symbols-outlined text-sm">check_circle</span>
+<p class="text-xs font-medium">Excelente: Solo 6 movimientos pendientes</p>
+</div>
+</div>
+</section>
+<!-- Summary KPI Cards -->
+<section class="px-4 grid grid-cols-2 gap-3 mb-6">
+<div class="bg-white dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-xl p-4 col-span-2">
+<p class="text-slate-500 dark:text-slate-400 text-xs font-medium mb-1">Movimientos Totales</p>
+<div class="flex items-end justify-between">
+<span class="text-2xl font-bold text-slate-900 dark:text-white">124</span>
+<span class="text-xs text-slate-400 mb-1">Volumen: $47,350.00</span>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-xl p-4">
+<p class="text-slate-500 dark:text-slate-400 text-xs font-medium mb-1">Conciliados</p>
+<p class="text-lg font-bold text-primary">$45,200</p>
+<div class="mt-2 h-1 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+<div class="h-full bg-primary" style="width: 94%;"></div>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-xl p-4">
+<p class="text-slate-500 dark:text-slate-400 text-xs font-medium mb-1">Pendientes</p>
+<p class="text-lg font-bold text-amber-500">$2,150</p>
+<div class="mt-2 h-1 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+<div class="h-full bg-amber-500" style="width: 6%;"></div>
+</div>
+</div>
+</section>
+<!-- Detailed List Header -->
+<section class="px-4 flex items-center justify-between mb-3">
+<h3 class="text-slate-900 dark:text-white text-base font-bold">Detalle de Auditoría</h3>
+<div class="flex gap-2">
+<button class="p-2 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-xl">search</span>
+</button>
+<button class="p-2 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-xl">filter_list</span>
+</button>
+</div>
+</section>
+<!-- Audit List -->
+<section class="px-4 space-y-3">
+<!-- Item 1 -->
+<div class="bg-white dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800 rounded-xl p-4">
+<div class="flex justify-between items-start mb-2">
+<div class="flex items-center gap-2">
+<span class="text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded uppercase">12 SEP</span>
+<span class="text-sm font-semibold text-slate-700 dark:text-slate-200">Unidad 402</span>
+</div>
+<span class="bg-primary/10 text-primary text-[10px] font-bold px-2 py-1 rounded-full uppercase">Verificado</span>
+</div>
+<p class="text-xs text-slate-500 dark:text-slate-400 mb-2 truncate">PAGO MANTENIMIENTO - TRANSF. 99283471</p>
+<div class="flex justify-between items-center pt-2 border-t border-slate-50 dark:border-slate-800">
+<span class="text-xs text-slate-400">Banco: Santander</span>
+<span class="text-base font-bold text-slate-900 dark:text-white">$150.00</span>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="bg-white dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800 rounded-xl p-4">
+<div class="flex justify-between items-start mb-2">
+<div class="flex items-center gap-2">
+<span class="text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded uppercase">10 SEP</span>
+<span class="text-sm font-semibold text-slate-700 dark:text-slate-200">Por asignar</span>
+</div>
+<span class="bg-amber-100 text-amber-600 text-[10px] font-bold px-2 py-1 rounded-full uppercase">Requiere Revisión</span>
+</div>
+<p class="text-xs text-slate-500 dark:text-slate-400 mb-2 truncate">DEP. EFECTIVO CAJERO 8821 - REF: DESCONOCIDA</p>
+<div class="flex justify-between items-center pt-2 border-t border-slate-50 dark:border-slate-800">
+<span class="text-xs text-slate-400">Banco: Santander</span>
+<span class="text-base font-bold text-slate-900 dark:text-white">$45.00</span>
+</div>
+</div>
+<!-- Item 3 -->
+<div class="bg-white dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800 rounded-xl p-4">
+<div class="flex justify-between items-start mb-2">
+<div class="flex items-center gap-2">
+<span class="text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded uppercase">08 SEP</span>
+<span class="text-sm font-semibold text-slate-700 dark:text-slate-200">Unidad 105</span>
+</div>
+<span class="bg-primary/10 text-primary text-[10px] font-bold px-2 py-1 rounded-full uppercase">Verificado</span>
+</div>
+<p class="text-xs text-slate-500 dark:text-slate-400 mb-2 truncate">PAGO AREAS COMUNES - RESERVA SEPT</p>
+<div class="flex justify-between items-center pt-2 border-t border-slate-50 dark:border-slate-800">
+<span class="text-xs text-slate-400">Banco: Santander</span>
+<span class="text-base font-bold text-slate-900 dark:text-white">$32.50</span>
+</div>
+</div>
+<!-- Item 4 -->
+<div class="bg-white dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800 rounded-xl p-4">
+<div class="flex justify-between items-start mb-2">
+<div class="flex items-center gap-2">
+<span class="text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded uppercase">05 SEP</span>
+<span class="text-sm font-semibold text-slate-700 dark:text-slate-200">Unidad 301</span>
+</div>
+<span class="bg-primary/10 text-primary text-[10px] font-bold px-2 py-1 rounded-full uppercase">Verificado</span>
+</div>
+<p class="text-xs text-slate-500 dark:text-slate-400 mb-2 truncate">MANTENIMIENTO ANUAL - PRONTO PAGO</p>
+<div class="flex justify-between items-center pt-2 border-t border-slate-50 dark:border-slate-800">
+<span class="text-xs text-slate-400">Banco: Santander</span>
+<span class="text-base font-bold text-slate-900 dark:text-white">$1,800.00</span>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white dark:bg-background-dark border-t border-slate-100 dark:border-slate-800 flex justify-around items-center py-2 px-4 z-20">
+<a class="flex flex-col items-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[10px] font-medium">Inicio</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined fill-1">description</span>
+<span class="text-[10px] font-bold">Reportes</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">corporate_fare</span>
+<span class="text-[10px] font-medium">Unidades</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-[10px] font-medium">Ajustes</span>
+</a>
+</nav>
+</div>
+</body></html>

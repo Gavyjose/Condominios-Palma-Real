@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Registro de Propietario</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#2ecc70",
+                        "background-light": "#f6f8f7",
+                        "background-dark": "#131f18",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark min-h-screen text-[#121714]">
+<div class="relative flex h-auto min-h-screen w-full flex-col bg-background-light dark:bg-background-dark group/design-root overflow-x-hidden">
+<!-- Top App Bar -->
+<header class="sticky top-0 z-50 flex items-center bg-white dark:bg-background-dark border-b border-primary/10 p-4 justify-between">
+<div class="text-[#121714] dark:text-white flex size-12 shrink-0 items-center justify-start cursor-pointer">
+<span class="material-symbols-outlined">arrow_back</span>
+</div>
+<h2 class="text-[#121714] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center pr-12">Registro de Propietario</h2>
+</header>
+<main class="flex-1 max-w-[520px] mx-auto w-full pb-32">
+<!-- Form Section: Basic Info -->
+<div class="p-4 space-y-5">
+<!-- Full Name -->
+<div class="flex flex-col gap-2">
+<label class="text-[#121714] dark:text-white text-sm font-medium leading-normal">Nombre Completo</label>
+<input class="form-input flex w-full rounded-lg text-[#121714] dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-primary/20 bg-white dark:bg-background-dark/50 h-14 placeholder:text-[#668573] p-4 text-base font-normal" placeholder="Ej. Juan Pérez" type="text"/>
+</div>
+<!-- Email -->
+<div class="flex flex-col gap-2">
+<label class="text-[#121714] dark:text-white text-sm font-medium leading-normal">Correo Electrónico</label>
+<input class="form-input flex w-full rounded-lg text-[#121714] dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-primary/20 bg-white dark:bg-background-dark/50 h-14 placeholder:text-[#668573] p-4 text-base font-normal" placeholder="ejemplo@correo.com" type="email"/>
+</div>
+<!-- Phone -->
+<div class="flex flex-col gap-2">
+<label class="text-[#121714] dark:text-white text-sm font-medium leading-normal">Teléfono</label>
+<input class="form-input flex w-full rounded-lg text-[#121714] dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-primary/20 bg-white dark:bg-background-dark/50 h-14 placeholder:text-[#668573] p-4 text-base font-normal" placeholder="+34 000 000 000" type="tel"/>
+</div>
+<!-- Unit Number -->
+<div class="flex flex-col gap-2">
+<label class="text-[#121714] dark:text-white text-sm font-medium leading-normal">Número de Unidad/Departamento</label>
+<input class="form-input flex w-full rounded-lg text-[#121714] dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-primary/20 bg-white dark:bg-background-dark/50 h-14 placeholder:text-[#668573] p-4 text-base font-normal" placeholder="Ej. 4B o Apto 102" type="text"/>
+</div>
+<!-- Ownership Type -->
+<div class="flex flex-col gap-3">
+<p class="text-[#121714] dark:text-white text-sm font-medium leading-normal">Tipo de Ocupación</p>
+<div class="grid grid-cols-2 gap-3">
+<label class="relative flex cursor-pointer">
+<input checked="" class="peer sr-only" name="ownership" type="radio" value="owner"/>
+<div class="flex flex-1 items-center justify-center gap-2 rounded-lg border border-primary/20 bg-white dark:bg-background-dark/50 p-4 text-[#121714] dark:text-white transition-all peer-checked:border-primary peer-checked:bg-primary/10 peer-checked:text-primary">
+<span class="material-symbols-outlined text-xl">person</span>
+<span class="text-sm font-medium">Propietario</span>
+</div>
+</label>
+<label class="relative flex cursor-pointer">
+<input class="peer sr-only" name="ownership" type="radio" value="tenant"/>
+<div class="flex flex-1 items-center justify-center gap-2 rounded-lg border border-primary/20 bg-white dark:bg-background-dark/50 p-4 text-[#121714] dark:text-white transition-all peer-checked:border-primary peer-checked:bg-primary/10 peer-checked:text-primary">
+<span class="material-symbols-outlined text-xl">key</span>
+<span class="text-sm font-medium">Inquilino</span>
+</div>
+</label>
+</div>
+</div>
+<!-- Document Upload Section -->
+<div class="flex flex-col gap-3 pt-4">
+<p class="text-[#121714] dark:text-white text-sm font-medium leading-normal">Documentos de Respaldo</p>
+<div class="flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 p-8 text-center transition-colors hover:bg-primary/10 cursor-pointer">
+<div class="flex h-12 w-12 items-center justify-center rounded-full bg-primary/20 text-primary">
+<span class="material-symbols-outlined text-2xl">cloud_upload</span>
+</div>
+<div>
+<p class="text-sm font-semibold text-[#121714] dark:text-white">Subir Identificación o Escritura</p>
+<p class="text-xs text-[#668573] mt-1">Formatos aceptados: PDF, JPG, PNG (Max 5MB)</p>
+</div>
+</div>
+<!-- File Preview (Static Example) -->
+<div class="flex items-center justify-between rounded-lg border border-primary/10 bg-white dark:bg-background-dark/30 p-3 mt-2">
+<div class="flex items-center gap-3">
+<div class="flex h-10 w-10 items-center justify-center rounded bg-primary/10 text-primary">
+<span class="material-symbols-outlined">description</span>
+</div>
+<div class="flex flex-col">
+<p class="text-sm font-medium text-[#121714] dark:text-white">dni_propietario.pdf</p>
+<p class="text-xs text-[#668573]">1.2 MB</p>
+</div>
+</div>
+<button class="text-red-500 hover:text-red-600 transition-colors p-2">
+<span class="material-symbols-outlined text-xl">delete</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+<!-- Fixed Footer Actions -->
+<footer class="fixed bottom-0 left-0 right-0 z-50 border-t border-primary/10 bg-white dark:bg-background-dark p-4 shadow-lg">
+<div class="mx-auto flex max-w-[520px] flex-col gap-3">
+<button class="flex h-14 w-full items-center justify-center rounded-xl bg-primary text-white text-base font-bold transition-transform active:scale-95 shadow-md shadow-primary/20">
+                    Guardar Cambios
+                </button>
+<button class="flex h-12 w-full items-center justify-center rounded-xl bg-transparent border border-primary/20 text-[#668573] text-base font-medium transition-colors hover:bg-primary/5">
+                    Cancelar
+                </button>
+</div>
+</footer>
+</div>
+</body></html>

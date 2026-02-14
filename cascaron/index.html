@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="es" class="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CondoControl Pro - Sistema de Gestión de Condominios</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#2ecc70",
+                        "background-light": "#f6f8f7",
+                        "background-dark": "#131f18",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+        }
+
+        .module-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .sidebar-item.active {
+            background-color: #2ecc7015;
+            color: #2ecc70;
+            border-right: 4px solid #2ecc70;
+        }
+
+        .sidebar-item.active span {
+            font-variation-settings: 'FILL' 1;
+        }
+
+        /* Glassmorphism scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #2ecc7030;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 flex h-screen">
+
+    <!-- Sidebar para Escritorio -->
+    <aside id="sidebar"
+        class="hidden md:flex flex-col w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300">
+        <div class="p-6 flex items-center gap-3">
+            <div class="size-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
+                <span class="material-symbols-outlined text-white">apartment</span>
+            </div>
+            <h1 class="text-xl font-bold tracking-tight">CondoControl</h1>
+        </div>
+
+        <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+            <div class="px-3 mb-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Gestión</div>
+            <button onclick="loadModule('panel_de_administración_(es)', this)"
+                class="sidebar-item active w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors hover:bg-slate-100 dark:hover:bg-slate-800">
+                <span class="material-symbols-outlined">dashboard</span> Panel Admin
+            </button>
+            <button onclick="loadModule('portal_del_propietario_(es)', this)"
+                class="sidebar-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors hover:bg-slate-100 dark:hover:bg-slate-800">
+                <span class="material-symbols-outlined">person</span> Portal Propietario
+            </button>
+            <button onclick="loadModule('muro_y_comunidad_(es)', this)"
+                class="sidebar-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors hover:bg-slate-100 dark:hover:bg-slate-800">
+                <span class="material-symbols-outlined">forum</span> Muro y Comunidad
+            </button>
+
+            <div class="px-3 mb-2 mt-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Finanzas</div>
+            <button onclick="loadModule('estado_de_cuenta_histórico', this)"
+                class="sidebar-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors hover:bg-slate-100 dark:hover:bg-slate-800">
+                <span class="material-symbols-outlined">receipt_long</span> Estado de Cuenta
+            </button>
+            <button onclick="loadModule('registro_de_pago_(propietario)', this)"
+                class="sidebar-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors hover:bg-slate-100 dark:hover:bg-slate-800">
+                <span class="material-symbols-outlined">payments</span> Registro de Pago
+            </button>
+            <button onclick="loadModule('validación_de_pago_(admin)', this)"
+                class="sidebar-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors hover:bg-slate-100 dark:hover:bg-slate-800">
+                <span class="material-symbols-outlined">verified</span> Validación Admin
+            </button>
+            <button onclick="loadModule('control_de_gastos_-_admin', this)"
+                class="sidebar-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors hover:bg-slate-100 dark:hover:bg-slate-800">
+                <span class="material-symbols-outlined">account_balance_wallet</span> Gastos
+            </button>
+            <button onclick="loadModule('resumen_de_bancos', this)"
+                class="sidebar-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors hover:bg-slate-100 dark:hover:bg-slate-800">
+                <span class="material-symbols-outlined">account_balance</span> Bancos
+            </button>
+            <button onclick="loadModule('herramienta_de_conciliación', this)"
+                class="sidebar-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors hover:bg-slate-100 dark:hover:bg-slate-800">
+                <span class="material-symbols-outlined">rebase_edit</span> Conciliación
+            </button>
+
+            <div class="px-3 mb-2 mt-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Proveedores</div>
+            <button onclick="loadModule('directorio_de_proveedores', this)"
+                class="sidebar-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors hover:bg-slate-100 dark:hover:bg-slate-800">
+                <span class="material-symbols-outlined">contact_page</span> Directorio
+            </button>
+            <button onclick="loadModule('pagos_a_proveedores', this)"
+                class="sidebar-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors hover:bg-slate-100 dark:hover:bg-slate-800">
+                <span class="material-symbols-outlined">shopping_cart_checkout</span> Pagos Proveedores
+            </button>
+
+            <div class="px-3 mb-2 mt-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Informes</div>
+            <button onclick="loadModule('control_de_morosos', this)"
+                class="sidebar-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors hover:bg-slate-100 dark:hover:bg-slate-800">
+                <span class="material-symbols-outlined">dangerous</span> Morosidad
+            </button>
+            <button onclick="loadModule('reporte_de_auditoría', this)"
+                class="sidebar-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors hover:bg-slate-100 dark:hover:bg-slate-800">
+                <span class="material-symbols-outlined">history_edu</span> Auditoría
+            </button>
+            <button onclick="loadModule('informes_contables', this)"
+                class="sidebar-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors hover:bg-slate-100 dark:hover:bg-slate-800">
+                <span class="material-symbols-outlined">assessment</span> Contabilidad
+            </button>
+        </nav>
+
+        <div class="p-4 border-t border-slate-200 dark:border-slate-800">
+            <button onclick="toggleDarkMode()"
+                class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                <span id="dark-mode-icon" class="material-symbols-outlined">dark_mode</span>
+                <span id="dark-mode-text">Modo Oscuro</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Contenido Principal -->
+    <main class="flex-1 flex flex-col relative">
+        <!-- Header (Mobile) -->
+        <header
+            class="md:hidden bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <div class="size-8 rounded-lg bg-primary flex items-center justify-center">
+                    <span class="material-symbols-outlined text-white text-sm">apartment</span>
+                </div>
+                <span class="font-bold">CondoControl</span>
+            </div>
+            <button onclick="toggleMobileMenu()" class="p-2">
+                <span class="material-symbols-outlined">menu</span>
+            </button>
+        </header>
+
+        <!-- Loader -->
+        <div id="loader"
+            class="absolute inset-0 z-50 bg-white/50 dark:bg-black/50 backdrop-blur-sm flex items-center justify-center hidden">
+            <div class="size-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        </div>
+
+        <!-- iframe del Módulo -->
+        <iframe id="content-frame" class="module-frame" src="panel_de_administración_(es)/code.html"></iframe>
+    </main>
+
+    <!-- Menú Móvil (Overlay) -->
+    <div id="mobile-menu" class="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm hidden flex-col transition-all">
+        <div class="bg-white dark:bg-slate-900 w-4/5 h-full p-6 flex flex-col">
+            <div class="flex justify-between items-center mb-8">
+                <span class="font-bold text-xl text-primary">Navegación</span>
+                <button onclick="toggleMobileMenu()" class="p-2 bg-slate-100 dark:bg-slate-800 rounded-full">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <nav id="mobile-nav" class="flex-1 overflow-y-auto space-y-4">
+                <!-- Se inyectarán los mismos items que en la sidebar pero adaptados -->
+            </nav>
+        </div>
+    </div>
+
+    <script>
+        const contentFrame = document.getElementById('content-frame');
+        const loader = document.getElementById('loader');
+        const mobileMenu = document.getElementById('mobile-menu');
+
+        function loadModule(modulePath, element) {
+            // Mostrar loader
+            loader.classList.remove('hidden');
+
+            // Actualizar iframe
+            contentFrame.src = `${modulePath}/code.html`;
+
+            // Actualizar estado activo en sidebar
+            document.querySelectorAll('.sidebar-item').forEach(btn => btn.classList.remove('active'));
+            if (element) element.classList.add('active');
+
+            // Cerrar menú móvil si está abierto
+            mobileMenu.classList.add('hidden');
+
+            // Ocultar loader cuando el iframe cargue
+            contentFrame.onload = () => {
+                loader.classList.add('hidden');
+                // Intentar sincronizar tema con el iframe
+                syncThemeWithIframe();
+            };
+        }
+
+        function toggleDarkMode() {
+            const html = document.documentElement;
+            const isDark = html.classList.toggle('dark');
+            const icon = document.getElementById('dark-mode-icon');
+            const text = document.getElementById('dark-mode-text');
+
+            icon.innerText = isDark ? 'light_mode' : 'dark_mode';
+            text.innerText = isDark ? 'Modo Claro' : 'Modo Oscuro';
+
+            syncThemeWithIframe();
+        }
+
+        function syncThemeWithIframe() {
+            try {
+                const isDark = document.documentElement.classList.contains('dark');
+                const iframeHtml = contentFrame.contentWindow.document.documentElement;
+                if (isDark) {
+                    iframeHtml.classList.add('dark');
+                    iframeHtml.classList.remove('light');
+                } else {
+                    iframeHtml.classList.add('light');
+                    iframeHtml.classList.remove('dark');
+                }
+            } catch (e) {
+                console.warn("No se pudo sincronizar el tema (posible restricción de CORS si se cargan de otro origen)", e);
+            }
+        }
+
+        function toggleMobileMenu() {
+            mobileMenu.classList.toggle('hidden');
+            if (!mobileMenu.classList.contains('hidden')) {
+                const nav = document.getElementById('mobile-nav');
+                const desktopNav = document.querySelector('aside nav').cloneNode(true);
+                // Ajustar clicks del clon para el móvil
+                desktopNav.querySelectorAll('button').forEach(btn => {
+                    const originalOnClick = btn.getAttribute('onclick');
+                    btn.setAttribute('onclick', originalOnClick);
+                });
+                nav.innerHTML = '';
+                nav.appendChild(desktopNav);
+            }
+        }
+
+        // Cargar por defecto el primer módulo
+        window.onload = () => {
+            syncThemeWithIframe();
+        };
+    </script>
+</body>
+
+</html>

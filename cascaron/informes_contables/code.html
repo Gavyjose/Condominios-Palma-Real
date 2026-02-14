@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Informes Contables Automatizados</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#2ecc70",
+                        "background-light": "#f6f8f7",
+                        "background-dark": "#131f18",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-[#121714] font-display min-h-screen">
+<div class="relative flex h-auto min-h-screen w-full max-w-md mx-auto flex-col bg-white dark:bg-background-dark shadow-xl overflow-x-hidden">
+<!-- Header -->
+<div class="flex items-center bg-white dark:bg-background-dark p-4 pb-2 justify-between sticky top-0 z-10 border-b border-gray-100 dark:border-primary/10">
+<div class="text-[#121714] dark:text-white flex size-10 items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-primary/20 cursor-pointer">
+<span class="material-symbols-outlined">arrow_back</span>
+</div>
+<h1 class="text-[#121714] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">Informes Contables</h1>
+<div class="flex w-10 items-center justify-end">
+<button class="flex cursor-pointer items-center justify-center rounded-full size-10 bg-transparent text-[#121714] dark:text-white hover:bg-gray-100 dark:hover:bg-primary/20">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</div>
+<!-- Search and Period Selector -->
+<div class="px-4 py-4 space-y-3">
+<label class="flex flex-col w-full">
+<div class="flex w-full flex-1 items-stretch rounded-xl h-12 shadow-sm border border-gray-100 dark:border-primary/10">
+<div class="text-primary flex bg-white dark:bg-background-dark items-center justify-center pl-4 rounded-l-xl">
+<span class="material-symbols-outlined">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 border-none bg-white dark:bg-background-dark text-[#121714] dark:text-white focus:ring-0 h-full placeholder:text-gray-400 px-4 rounded-r-xl text-sm font-normal" placeholder="Buscar informes o períodos..." value=""/>
+</div>
+</label>
+<div class="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+<span class="px-3 py-1.5 rounded-full bg-primary text-white text-xs font-semibold whitespace-nowrap">Todo</span>
+<span class="px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-semibold whitespace-nowrap border border-primary/20">Este Mes</span>
+<span class="px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-semibold whitespace-nowrap border border-primary/20">2024</span>
+<span class="px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-semibold whitespace-nowrap border border-primary/20">Anual</span>
+</div>
+</div>
+<!-- Section: Informes Disponibles -->
+<section class="px-4 py-2">
+<h2 class="text-[#121714] dark:text-white text-xl font-bold leading-tight tracking-[-0.015em] mb-4">Informes Disponibles</h2>
+<div class="grid gap-4">
+<!-- Balance General -->
+<div class="flex flex-col gap-4 rounded-xl bg-white dark:bg-[#1a2a20] p-4 shadow-[0_4px_12px_rgba(0,0,0,0.05)] border border-gray-50 dark:border-primary/5">
+<div class="flex items-start justify-between">
+<div class="flex gap-3">
+<div class="size-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">account_balance</span>
+</div>
+<div class="flex flex-col">
+<p class="text-[#121714] dark:text-white text-base font-bold">Balance General</p>
+<p class="text-gray-500 dark:text-gray-400 text-xs">Resumen de activos y pasivos</p>
+</div>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="flex-1 flex items-center justify-center gap-2 rounded-lg bg-primary text-white h-10 text-sm font-semibold transition-colors hover:bg-opacity-90">
+<span class="material-symbols-outlined text-[18px]">picture_as_pdf</span>
+                            PDF
+                        </button>
+<button class="flex-1 flex items-center justify-center gap-2 rounded-lg bg-primary/10 text-primary border border-primary/20 h-10 text-sm font-semibold transition-colors hover:bg-primary/20">
+<span class="material-symbols-outlined text-[18px]">table_view</span>
+                            Excel
+                        </button>
+</div>
+</div>
+<!-- Estado de Resultados -->
+<div class="flex flex-col gap-4 rounded-xl bg-white dark:bg-[#1a2a20] p-4 shadow-[0_4px_12px_rgba(0,0,0,0.05)] border border-gray-50 dark:border-primary/5">
+<div class="flex items-start justify-between">
+<div class="flex gap-3">
+<div class="size-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">monitoring</span>
+</div>
+<div class="flex flex-col">
+<p class="text-[#121714] dark:text-white text-base font-bold">Estado de Resultados</p>
+<p class="text-gray-500 dark:text-gray-400 text-xs">Pérdidas y ganancias del periodo</p>
+</div>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="flex-1 flex items-center justify-center gap-2 rounded-lg bg-primary text-white h-10 text-sm font-semibold transition-colors hover:bg-opacity-90">
+<span class="material-symbols-outlined text-[18px]">picture_as_pdf</span>
+                            PDF
+                        </button>
+<button class="flex-1 flex items-center justify-center gap-2 rounded-lg bg-primary/10 text-primary border border-primary/20 h-10 text-sm font-semibold transition-colors hover:bg-primary/20">
+<span class="material-symbols-outlined text-[18px]">table_view</span>
+                            Excel
+                        </button>
+</div>
+</div>
+<!-- Ejecución Presupuestaria -->
+<div class="flex flex-col gap-4 rounded-xl bg-white dark:bg-[#1a2a20] p-4 shadow-[0_4px_12px_rgba(0,0,0,0.05)] border border-gray-50 dark:border-primary/5">
+<div class="flex items-start justify-between">
+<div class="flex gap-3">
+<div class="size-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">assignment_turned_in</span>
+</div>
+<div class="flex flex-col">
+<p class="text-[#121714] dark:text-white text-base font-bold">Ejecución Presupuestaria</p>
+<p class="text-gray-500 dark:text-gray-400 text-xs">Presupuestado vs. Gastado real</p>
+</div>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="flex-1 flex items-center justify-center gap-2 rounded-lg bg-primary text-white h-10 text-sm font-semibold transition-colors hover:bg-opacity-90">
+<span class="material-symbols-outlined text-[18px]">picture_as_pdf</span>
+                            PDF
+                        </button>
+<button class="flex-1 flex items-center justify-center gap-2 rounded-lg bg-primary/10 text-primary border border-primary/20 h-10 text-sm font-semibold transition-colors hover:bg-primary/20">
+<span class="material-symbols-outlined text-[18px]">table_view</span>
+                            Excel
+                        </button>
+</div>
+</div>
+<!-- Libro Auxiliar -->
+<div class="flex flex-col gap-4 rounded-xl bg-white dark:bg-[#1a2a20] p-4 shadow-[0_4px_12px_rgba(0,0,0,0.05)] border border-gray-50 dark:border-primary/5">
+<div class="flex items-start justify-between">
+<div class="flex gap-3">
+<div class="size-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">menu_book</span>
+</div>
+<div class="flex flex-col">
+<p class="text-[#121714] dark:text-white text-base font-bold">Libro Auxiliar</p>
+<p class="text-gray-500 dark:text-gray-400 text-xs">Detalle histórico de movimientos</p>
+</div>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="flex-1 flex items-center justify-center gap-2 rounded-lg bg-primary text-white h-10 text-sm font-semibold transition-colors hover:bg-opacity-90">
+<span class="material-symbols-outlined text-[18px]">picture_as_pdf</span>
+                            PDF
+                        </button>
+<button class="flex-1 flex items-center justify-center gap-2 rounded-lg bg-primary/10 text-primary border border-primary/20 h-10 text-sm font-semibold transition-colors hover:bg-primary/20">
+<span class="material-symbols-outlined text-[18px]">table_view</span>
+                            Excel
+                        </button>
+</div>
+</div>
+</div>
+</section>
+<!-- Section: Informes Recientes -->
+<section class="px-4 py-6 mb-20">
+<div class="flex items-center justify-between mb-4">
+<h2 class="text-[#121714] dark:text-white text-xl font-bold leading-tight tracking-[-0.015em]">Informes Recientes</h2>
+<button class="text-primary text-xs font-bold uppercase tracking-wider">Ver todos</button>
+</div>
+<div class="space-y-3">
+<div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-primary/5 rounded-xl border border-gray-100 dark:border-primary/10">
+<div class="flex items-center gap-3">
+<div class="text-red-500">
+<span class="material-symbols-outlined">description</span>
+</div>
+<div>
+<p class="text-sm font-bold dark:text-white">Balance_Enero_2024.pdf</p>
+<p class="text-[10px] text-gray-500">Generado: Hoy, 10:45 AM • 1.2 MB</p>
+</div>
+</div>
+<button class="text-primary">
+<span class="material-symbols-outlined text-lg">download</span>
+</button>
+</div>
+<div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-primary/5 rounded-xl border border-gray-100 dark:border-primary/10">
+<div class="flex items-center gap-3">
+<div class="text-green-600">
+<span class="material-symbols-outlined">table_chart</span>
+</div>
+<div>
+<p class="text-sm font-bold dark:text-white">Presupuesto_Q4_2023.xlsx</p>
+<p class="text-[10px] text-gray-500">Generado: Ayer, 4:20 PM • 850 KB</p>
+</div>
+</div>
+<button class="text-primary">
+<span class="material-symbols-outlined text-lg">download</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Bottom Navigation Bar -->
+<div class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md flex gap-2 border-t border-gray-100 dark:border-primary/20 bg-white/95 dark:bg-background-dark/95 backdrop-blur-md px-4 pb-4 pt-3">
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-gray-400" href="#">
+<span class="material-symbols-outlined">home</span>
+<p class="text-[10px] font-medium leading-normal">Inicio</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-primary" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">description</span>
+<p class="text-[10px] font-medium leading-normal">Informes</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-gray-400" href="#">
+<span class="material-symbols-outlined">payments</span>
+<p class="text-[10px] font-medium leading-normal">Gastos</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-gray-400" href="#">
+<span class="material-symbols-outlined">settings</span>
+<p class="text-[10px] font-medium leading-normal">Ajustes</p>
+</a>
+</div>
+</div>
+</body></html>

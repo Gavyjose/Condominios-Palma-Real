@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Control de Gastos - Condominio</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#2ecc70",
+                        "background-light": "#f6f8f7",
+                        "background-dark": "#131f18",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .active-tab {
+            color: #2ecc70 !important;
+        }
+        .active-tab .material-symbols-outlined {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-[#121714] font-display min-h-screen pb-24">
+<!-- Header Section -->
+<header class="bg-white dark:bg-background-dark border-b border-gray-200 dark:border-gray-800 sticky top-0 z-10">
+<div class="max-w-md mx-auto px-4 py-4 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-2xl">account_balance_wallet</span>
+<h1 class="text-xl font-bold tracking-tight">Control de Gastos</h1>
+</div>
+<button class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+</div>
+</header>
+<main class="max-w-md mx-auto px-4 py-6 space-y-6">
+<!-- Month Selector -->
+<div class="flex items-center justify-between bg-white dark:bg-gray-900 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800">
+<div class="flex flex-col">
+<span class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Periodo Actual</span>
+<div class="flex items-center gap-1 cursor-pointer">
+<span class="text-lg font-bold">Junio 2024</span>
+<span class="material-symbols-outlined text-primary">expand_more</span>
+</div>
+</div>
+<button class="bg-primary/10 text-primary p-2 rounded-lg">
+<span class="material-symbols-outlined">calendar_today</span>
+</button>
+</div>
+<!-- Hero Summary Card -->
+<div class="bg-primary text-white p-6 rounded-xl shadow-lg shadow-primary/20 relative overflow-hidden">
+<div class="relative z-10">
+<p class="text-white/80 text-sm font-medium">Total Egresos del Mes</p>
+<h2 class="text-4xl font-extrabold mt-1">$15,400.00</h2>
+<div class="mt-4 flex items-center gap-2 bg-white/20 w-fit px-3 py-1 rounded-full text-xs">
+<span class="material-symbols-outlined text-sm">trending_up</span>
+<span>+5.2% vs mes anterior</span>
+</div>
+</div>
+<!-- Abstract background shape -->
+<div class="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+</div>
+<!-- Category Distribution Chart (Visual Representation) -->
+<div class="bg-white dark:bg-gray-900 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800">
+<h3 class="text-sm font-bold text-gray-500 uppercase mb-4 tracking-wide">Distribución por Categorías</h3>
+<div class="flex items-end justify-between gap-2 h-40 mb-6 px-2">
+<div class="flex flex-col items-center gap-2 flex-1 group">
+<div class="w-full bg-primary rounded-t-lg transition-all duration-300" style="height: 100%;"></div>
+<span class="text-[10px] font-bold text-gray-400 group-hover:text-primary">40%</span>
+</div>
+<div class="flex flex-col items-center gap-2 flex-1 group">
+<div class="w-full bg-primary/70 rounded-t-lg transition-all duration-300" style="height: 75%;"></div>
+<span class="text-[10px] font-bold text-gray-400 group-hover:text-primary">30%</span>
+</div>
+<div class="flex flex-col items-center gap-2 flex-1 group">
+<div class="w-full bg-primary/40 rounded-t-lg transition-all duration-300" style="height: 50%;"></div>
+<span class="text-[10px] font-bold text-gray-400 group-hover:text-primary">20%</span>
+</div>
+<div class="flex flex-col items-center gap-2 flex-1 group">
+<div class="w-full bg-gray-200 dark:bg-gray-700 rounded-t-lg transition-all duration-300" style="height: 25%;"></div>
+<span class="text-[10px] font-bold text-gray-400 group-hover:text-primary">10%</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-3 text-sm">
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-full bg-primary"></div>
+<span class="text-gray-600 dark:text-gray-400">Mantenimiento</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-full bg-primary/70"></div>
+<span class="text-gray-600 dark:text-gray-400">Servicios Pub.</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-full bg-primary/40"></div>
+<span class="text-gray-600 dark:text-gray-400">Seguridad</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-3 h-3 rounded-full bg-gray-200 dark:bg-gray-700"></div>
+<span class="text-gray-600 dark:text-gray-400">Otros</span>
+</div>
+</div>
+</div>
+<!-- Recent Expenses List -->
+<div class="space-y-4">
+<div class="flex items-center justify-between">
+<h3 class="font-bold text-lg">Egresos Recientes</h3>
+<button class="text-primary text-sm font-semibold">Ver todos</button>
+</div>
+<div class="space-y-3">
+<!-- List Item 1 -->
+<div class="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-100 dark:border-gray-800 flex items-center justify-between group hover:border-primary/30 transition-colors">
+<div class="flex gap-3 items-center">
+<div class="w-12 h-12 rounded-lg bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-400">
+<span class="material-symbols-outlined">cleaning_services</span>
+</div>
+<div>
+<p class="font-bold text-sm leading-tight">Limpieza Brillo SAS</p>
+<p class="text-xs text-gray-500">Limpieza Áreas Comunes</p>
+<p class="text-[10px] text-gray-400 mt-1 uppercase font-semibold">12 Jun 2024</p>
+</div>
+</div>
+<div class="flex flex-col items-end gap-2">
+<span class="font-bold text-sm text-gray-900 dark:text-white">$850.00</span>
+<button class="flex items-center gap-1 text-[10px] font-bold text-primary bg-primary/10 px-2 py-1 rounded">
+<span class="material-symbols-outlined text-sm">picture_as_pdf</span>
+                            FACTURA
+                        </button>
+</div>
+</div>
+<!-- List Item 2 -->
+<div class="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-100 dark:border-gray-800 flex items-center justify-between group hover:border-primary/30 transition-colors">
+<div class="flex gap-3 items-center">
+<div class="w-12 h-12 rounded-lg bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-400">
+<span class="material-symbols-outlined">bolt</span>
+</div>
+<div>
+<p class="font-bold text-sm leading-tight">EPM S.A. E.S.P.</p>
+<p class="text-xs text-gray-500">Energía Eléctrica Bloques</p>
+<p class="text-[10px] text-gray-400 mt-1 uppercase font-semibold">10 Jun 2024</p>
+</div>
+</div>
+<div class="flex flex-col items-end gap-2">
+<span class="font-bold text-sm text-gray-900 dark:text-white">$1,240.50</span>
+<button class="flex items-center gap-1 text-[10px] font-bold text-primary bg-primary/10 px-2 py-1 rounded">
+<span class="material-symbols-outlined text-sm">picture_as_pdf</span>
+                            FACTURA
+                        </button>
+</div>
+</div>
+<!-- List Item 3 -->
+<div class="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-100 dark:border-gray-800 flex items-center justify-between group hover:border-primary/30 transition-colors">
+<div class="flex gap-3 items-center">
+<div class="w-12 h-12 rounded-lg bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-400">
+<span class="material-symbols-outlined">shield</span>
+</div>
+<div>
+<p class="font-bold text-sm leading-tight">Seguridad Atlas</p>
+<p class="text-xs text-gray-500">Servicio de Vigilancia 24h</p>
+<p class="text-[10px] text-gray-400 mt-1 uppercase font-semibold">05 Jun 2024</p>
+</div>
+</div>
+<div class="flex flex-col items-end gap-2">
+<span class="font-bold text-sm text-gray-900 dark:text-white">$4,500.00</span>
+<button class="flex items-center gap-1 text-[10px] font-bold text-primary bg-primary/10 px-2 py-1 rounded">
+<span class="material-symbols-outlined text-sm">picture_as_pdf</span>
+                            FACTURA
+                        </button>
+</div>
+</div>
+<!-- List Item 4 -->
+<div class="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-100 dark:border-gray-800 flex items-center justify-between group hover:border-primary/30 transition-colors">
+<div class="flex gap-3 items-center">
+<div class="w-12 h-12 rounded-lg bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-400">
+<span class="material-symbols-outlined">water_drop</span>
+</div>
+<div>
+<p class="font-bold text-sm leading-tight">Aguas Nacionales</p>
+<p class="text-xs text-gray-500">Mantenimiento Tanques</p>
+<p class="text-[10px] text-gray-400 mt-1 uppercase font-semibold">02 Jun 2024</p>
+</div>
+</div>
+<div class="flex flex-col items-end gap-2">
+<span class="font-bold text-sm text-gray-900 dark:text-white">$320.00</span>
+<button class="flex items-center gap-1 text-[10px] font-bold text-primary bg-primary/10 px-2 py-1 rounded">
+<span class="material-symbols-outlined text-sm">picture_as_pdf</span>
+                            FACTURA
+                        </button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 right-0 bg-white dark:bg-background-dark border-t border-gray-200 dark:border-gray-800 px-6 py-3 z-50">
+<div class="max-w-md mx-auto flex justify-between items-center">
+<a class="flex flex-col items-center gap-1 text-gray-400 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[10px] font-medium">Inicio</span>
+</a>
+<a class="flex flex-col items-center gap-1 active-tab" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="text-[10px] font-bold">Gastos</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-gray-400 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">bar_chart</span>
+<span class="text-[10px] font-medium">Reportes</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-gray-400 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-[10px] font-medium">Ajustes</span>
+</a>
+</div>
+</nav>
+<!-- Floating Action Button for adding expense -->
+<div class="fixed bottom-24 right-4 md:right-[calc(50%-220px)] z-40">
+<button class="bg-primary text-white w-14 h-14 rounded-full shadow-lg shadow-primary/40 flex items-center justify-center hover:scale-105 transition-transform active:scale-95">
+<span class="material-symbols-outlined text-3xl font-bold">add</span>
+</button>
+</div>
+</body></html>
